@@ -19,7 +19,7 @@ function MoneyInput({
 }: {
   currency: string;
   size?: 'sm' | 'lg';
-} & React.InputHTMLAttributes<HTMLInputElement>) {
+} & Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size'>) {
   const symbol = getCurrencySymbol(currency);
   const prefix = isCurrencyPrefix(currency);
   const isLg = size === 'lg';
