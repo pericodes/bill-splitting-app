@@ -207,3 +207,169 @@ BEGIN
     GRANT EXECUTE ON FUNCTION merge_ghost_into_user(uuid, uuid) TO authenticated;
   END IF;
 END $$;
+
+-- Reclama un invitado en UNA cuenta: reasigna membresía, saldo y gastos de
+-- esa cuenta al destino. Borra al invitado solo si no le quedan membresías.
+-- Atómico: Data API no puede transaccionar varias tablas a la vez.
+CREATE OR REPLACE FUNCTION claim_participant_in_account(
+  p_account_id uuid,
+  p_source_id uuid,
+  p_target_id uuid
+)
+RETURNS json
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  v_balance numeric;
+  v_target_is_member boolean;
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM accounts WHERE id = p_account_id) THEN
+    RAISE EXCEPTION 'Cuenta no encontrada';
+  END IF;
+
+  PERFORM 1 FROM users WHERE id = p_source_id FOR UPDATE;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Este participante ya fue reclamado';
+  END IF;
+
+  IF p_source_id = p_target_id THEN
+    SELECT EXISTS (
+      SELECT 1 FROM account_members
+      WHERE account_id = p_account_id AND user_id = p_target_id
+    ) INTO v_target_is_member;
+    IF NOT v_target_is_member THEN
+      RAISE EXCEPTION 'El participante no está en esta cuenta';
+    END IF;
+    SELECT balance INTO v_balance
+    FROM account_balances
+    WHERE account_id = p_account_id AND user_id = p_target_id;
+    RETURN json_build_object(
+      'success', true,
+      'target_id', p_target_id,
+      'noop', true,
+      'balance', COALESCE(v_balance, 0)
+    );
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM users WHERE id = p_source_id AND is_ghost IS TRUE
+  ) THEN
+    RAISE EXCEPTION 'El usuario origen no es un invitado';
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM users WHERE id = p_target_id) THEN
+    RAISE EXCEPTION 'El usuario destino no existe';
+  END IF;
+
+  PERFORM 1 FROM account_members
+  WHERE account_id = p_account_id AND user_id = p_source_id
+  FOR UPDATE;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Este participante ya fue reclamado';
+  END IF;
+
+  SELECT EXISTS (
+    SELECT 1 FROM account_members
+    WHERE account_id = p_account_id AND user_id = p_target_id
+  ) INTO v_target_is_member;
+
+  IF v_target_is_member THEN
+    SELECT balance INTO v_balance
+    FROM account_balances
+    WHERE account_id = p_account_id AND user_id = p_target_id;
+    RETURN json_build_object(
+      'success', true,
+      'target_id', p_target_id,
+      'noop', true,
+      'balance', COALESCE(v_balance, 0)
+    );
+  END IF;
+
+  UPDATE accounts
+  SET created_by = p_target_id
+  WHERE id = p_account_id AND created_by = p_source_id;
+
+  UPDATE transactions
+  SET created_by = p_target_id
+  WHERE account_id = p_account_id AND created_by = p_source_id;
+
+  UPDATE transaction_entries AS t
+  SET
+    paid_amount = t.paid_amount + g.paid_amount,
+    owed_amount = t.owed_amount + g.owed_amount
+  FROM transaction_entries AS g
+  WHERE g.user_id = p_source_id
+    AND g.account_id = p_account_id
+    AND t.user_id = p_target_id
+    AND t.transaction_id = g.transaction_id;
+
+  DELETE FROM transaction_entries AS g
+  WHERE g.user_id = p_source_id
+    AND g.account_id = p_account_id
+    AND EXISTS (
+      SELECT 1 FROM transaction_entries AS t
+      WHERE t.user_id = p_target_id AND t.transaction_id = g.transaction_id
+    );
+
+  UPDATE transaction_entries
+  SET user_id = p_target_id
+  WHERE user_id = p_source_id AND account_id = p_account_id;
+
+  UPDATE account_balances AS t
+  SET
+    balance = t.balance + g.balance,
+    updated_at = now()
+  FROM account_balances AS g
+  WHERE g.user_id = p_source_id
+    AND g.account_id = p_account_id
+    AND t.user_id = p_target_id
+    AND t.account_id = p_account_id;
+
+  DELETE FROM account_balances AS g
+  WHERE g.user_id = p_source_id
+    AND g.account_id = p_account_id
+    AND EXISTS (
+      SELECT 1 FROM account_balances AS t
+      WHERE t.user_id = p_target_id AND t.account_id = g.account_id
+    );
+
+  UPDATE account_balances
+  SET user_id = p_target_id
+  WHERE user_id = p_source_id AND account_id = p_account_id;
+
+  UPDATE account_members
+  SET user_id = p_target_id
+  WHERE account_id = p_account_id AND user_id = p_source_id;
+
+  IF EXISTS (SELECT 1 FROM users WHERE id = p_source_id AND is_ghost IS TRUE)
+     AND NOT EXISTS (SELECT 1 FROM account_members WHERE user_id = p_source_id)
+  THEN
+    BEGIN
+      DELETE FROM users WHERE id = p_source_id;
+    EXCEPTION WHEN foreign_key_violation THEN
+      NULL;
+    END;
+  END IF;
+
+  SELECT balance INTO v_balance
+  FROM account_balances
+  WHERE account_id = p_account_id AND user_id = p_target_id;
+
+  RETURN json_build_object(
+    'success', true,
+    'target_id', p_target_id,
+    'noop', false,
+    'balance', COALESCE(v_balance, 0)
+  );
+END;
+$$;
+
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'anonymous') THEN
+    GRANT EXECUTE ON FUNCTION claim_participant_in_account(uuid, uuid, uuid) TO anonymous;
+  END IF;
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authenticated') THEN
+    GRANT EXECUTE ON FUNCTION claim_participant_in_account(uuid, uuid, uuid) TO authenticated;
+  END IF;
+END $$;

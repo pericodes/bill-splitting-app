@@ -33,12 +33,13 @@ export function useAccountData() {
   return ctx;
 }
 
+function txCreatedAt(tx: { createdAt?: string; created_at?: string; occurredOn?: string; occurred_on?: string }) {
+  const raw = tx.createdAt || tx.created_at || tx.occurredOn || tx.occurred_on;
+  return raw ? new Date(raw).getTime() : 0;
+}
+
 function sortTransactions(transactions: any[]) {
-  return [...transactions].sort(
-    (a, b) =>
-      new Date(b.occurredOn || b.occurred_on).getTime() -
-      new Date(a.occurredOn || a.occurred_on).getTime()
-  );
+  return [...transactions].sort((a, b) => txCreatedAt(b) - txCreatedAt(a));
 }
 
 export function AccountDataProvider({

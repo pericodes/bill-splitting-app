@@ -38,6 +38,7 @@
     "create_account": "Create account",
     "back_home": "Back to home",
     "ghost_hint": "A local profile without a password will be created for this browser.",
+    "join_sign_in_hint": "Sign in to join the group with your account.",
     "name_required": "Name is required",
     "guest_create_error": "Could not create guest user",
     "unexpected_error": "An unexpected error occurred"
@@ -135,7 +136,13 @@
     "individual": "Individual balances",
     "owed_to_them": "Is owed",
     "they_owe": "Owes",
-    "settled": "Settled"
+    "settled": "Settled",
+    "total_spent": "Total spent {{amount}}",
+    "export_excel": "Export as Excel",
+    "csv_date": "Date",
+    "csv_concept": "Description",
+    "csv_person": "Person",
+    "csv_amount": "Amount"
   },
   "participants": {
     "title": "Participants",
@@ -179,14 +186,29 @@
     "loading": "Loading invite...",
     "invited": "You've been invited to join this shared expense group.",
     "current_participants": "Current participants",
+    "choose_who": "Who are you in this group?",
+    "choose_hint": "Pick your name if you were already added, or join as someone new.",
+    "new_participant": "I'm a new participant",
+    "guest": "Guest",
+    "registered": "Registered",
+    "already_registered": "This participant already has an account. Sign in with that account to join as them.",
     "and_more": "... and {{count}} more",
     "you_will_be": "You'll be participant {{n}}",
     "name_placeholder": "Your name (e.g. Laura)",
     "joining": "Joining...",
     "join": "Join group",
+    "sign_in": "Sign in",
     "cancel": "Cancel and go home",
+    "claim_title": "Join as {{name}}?",
+    "claim_desc": "You will take their place in this account's expenses and balances. Anyone using that guest profile will lose access to this group. This cannot be undone.",
+    "claim_confirm": "Yes, I am {{name}}",
+    "select_required": "Choose a participant or join as someone new.",
+    "name_required": "Enter your name to join as a new participant.",
     "error_user": "Could not create the user",
-    "error_join": "Could not join the account"
+    "error_join": "Could not join the account",
+    "error_claim": "Could not claim this participant",
+    "error_claimed": "This participant was already claimed. Choose another option.",
+    "error_session": "Your session is not valid. Sign in again."
   },
   "not_found": {
     "message": "Page not found"

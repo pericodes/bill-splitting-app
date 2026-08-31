@@ -3,12 +3,12 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
-import { useStore } from "@/data/store";
+import { useStore, useHasHydrated } from "@/data/store";
 import { completeAuthAction, createGhostUser } from "@/actions/app";
 import { neonSignIn, neonSignUp } from "@/lib/clientAuth";
 
-export default function WelcomePage() {
-  const [tab, setTab] = useState<"ghost" | "login" | "register">("ghost");
+export default function WelcomePage({ nextPath = null }: { nextPath?: string | null }) {
+  const [tab, setTab] = useState<"ghost" | "login" | "register">(nextPath ? "login" : "ghost");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
@@ -17,13 +17,15 @@ export default function WelcomePage() {
 
   const router = useRouter();
   const { t } = useTranslation();
+  const hasHydrated = useHasHydrated();
   const { currentUser, setCurrentUser } = useStore();
+  const afterAuth = nextPath || "/dashboard";
+  const fromJoin = !!nextPath;
 
   useEffect(() => {
-    if (currentUser) {
-      router.push("/dashboard");
-    }
-  }, [currentUser, router]);
+    if (!hasHydrated || !currentUser) return;
+    router.push(afterAuth);
+  }, [hasHydrated, currentUser, afterAuth, router]);
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,6 +34,10 @@ export default function WelcomePage() {
 
     try {
       if (tab === "ghost") {
+        if (fromJoin) {
+          setLoading(false);
+          return;
+        }
         if (!name.trim()) {
           setError(t("welcome.name_required"));
           setLoading(false);
@@ -44,7 +50,7 @@ export default function WelcomePage() {
         }
 
         setCurrentUser(res.user);
-        router.push("/dashboard");
+        router.push(afterAuth);
         return;
       }
 
@@ -60,7 +66,7 @@ export default function WelcomePage() {
         throw new Error(res.error || t("welcome.unexpected_error"));
       }
       setCurrentUser(res.user);
-      router.push("/dashboard");
+      router.push(afterAuth);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : t("welcome.unexpected_error"));
     } finally {
@@ -70,6 +76,14 @@ export default function WelcomePage() {
 
   const fieldClass =
     "w-full pl-10 pr-3 py-3 bg-surface-container-low border border-surface-variant rounded-lg focus:ring-1 focus:ring-primary focus:border-primary text-base text-on-surface placeholder:text-outline-variant transition-all outline-none";
+
+  if (!hasHydrated || currentUser) {
+    return (
+      <main className="flex-1 flex items-center justify-center p-4">
+        <p className="text-on-surface-variant">{t("common.loading")}</p>
+      </main>
+    );
+  }
 
   return (
     <main className="flex-1 flex flex-col items-center justify-center p-4 gap-4">
@@ -84,21 +98,25 @@ export default function WelcomePage() {
             </span>
           </div>
           <h1 className="text-3xl font-bold text-primary">{t("common.brand")}</h1>
-          <p className="text-sm text-outline mt-1">{t("welcome.subtitle")}</p>
+          <p className="text-sm text-outline mt-1">
+            {fromJoin ? t("welcome.join_sign_in_hint") : t("welcome.subtitle")}
+          </p>
         </div>
 
         <div className="flex border-b border-surface-variant px-4">
-          <button
-            type="button"
-            onClick={() => setTab("ghost")}
-            className={`flex-1 py-3 text-sm font-semibold transition-colors text-center focus:outline-none border-b-2 ${
-              tab === "ghost"
-                ? "text-primary border-primary"
-                : "text-outline-variant hover:text-on-surface-variant border-transparent"
-            }`}
-          >
-            {t("welcome.guest")}
-          </button>
+          {!fromJoin && (
+            <button
+              type="button"
+              onClick={() => setTab("ghost")}
+              className={`flex-1 py-3 text-sm font-semibold transition-colors text-center focus:outline-none border-b-2 ${
+                tab === "ghost"
+                  ? "text-primary border-primary"
+                  : "text-outline-variant hover:text-on-surface-variant border-transparent"
+              }`}
+            >
+              {t("welcome.guest")}
+            </button>
+          )}
           <button
             type="button"
             onClick={() => setTab("login")}

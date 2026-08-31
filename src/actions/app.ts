@@ -45,6 +45,33 @@ async function loadUserWithSecret(userId: string): Promise<AppUserPayload> {
   return toAppUser(user, secrets?.[0] || null);
 }
 
+async function verifyUserSession(userId: string, sessionSecret: string) {
+  const { data: secrets, error } = await dataApi.from("user_secrets").select("*").eq("user_id", userId);
+  throwIfApiError(error, "No se pudo comprobar la sesión");
+  const secret = secrets?.[0];
+  const stored = secret?.session_secret || secret?.sessionSecret;
+  return !!secret && stored === sessionSecret;
+}
+
+function rpcPayload(data: unknown): { success?: boolean; target_id?: string; balance?: number | string; noop?: boolean } {
+  if (data && typeof data === "object" && !Array.isArray(data)) {
+    return data as { success?: boolean; target_id?: string; balance?: number | string; noop?: boolean };
+  }
+  if (typeof data === "string") {
+    try {
+      return JSON.parse(data);
+    } catch {
+      return {};
+    }
+  }
+  return {};
+}
+
+function numericBalance(value: number | string | undefined) {
+  const n = parseFloat(String(value ?? 0));
+  return Number.isFinite(n) ? n : 0;
+}
+
 async function findUserByAuthId(authUserId: string) {
   const { data, error } = await dataApi.from("users").select("*").eq("auth_user_id", authUserId);
   throwIfApiError(error, "No se pudo buscar el usuario");
@@ -342,30 +369,42 @@ export async function createAccountAction(userId: string, name: string, iconKey:
   }
 }
 
+export type AccountPreviewUser = {
+  id: string;
+  display_name: string;
+  is_ghost: boolean;
+};
+
 export async function getAccountPreviewAction(token: string) {
   try {
     const { data: account, error: accountError } = await dataApi
       .from("accounts")
-      .select("*")
+      .select("id, name, icon_key, currency")
       .eq("invite_token", token)
       .single();
     if (accountError || !account) return { success: false, error: "Not found" };
 
     const { data: mems, error: memsError } = await dataApi
       .from("account_members")
-      .select("*")
+      .select("user_id")
       .eq("account_id", account.id);
     throwIfApiError(memsError, "No se pudieron leer los miembros");
 
     const userIds = (mems || []).map((m: { user_id: string }) => m.user_id);
-    let accountUsers: any[] = [];
+    let accountUsers: AccountPreviewUser[] = [];
     if (userIds.length > 0) {
       const { data: users, error: usersError } = await dataApi
         .from("users")
-        .select("*")
+        .select("id, display_name, is_ghost")
         .in("id", userIds);
       throwIfApiError(usersError, "No se pudieron leer los usuarios");
-      accountUsers = users || [];
+      accountUsers = (users || []).map(
+        (u: { id: string; display_name?: string; displayName?: string; is_ghost?: boolean; isGhost?: boolean }) => ({
+          id: u.id,
+          display_name: u.display_name || u.displayName || "",
+          is_ghost: !!(u.is_ghost ?? u.isGhost),
+        })
+      );
     }
 
     return { success: true, account, users: accountUsers };
@@ -374,11 +413,15 @@ export async function getAccountPreviewAction(token: string) {
   }
 }
 
-export async function joinAccountAction(token: string, userId: string) {
+export async function joinAccountAction(token: string, userId: string, sessionSecret: string) {
   try {
+    if (!sessionSecret || !(await verifyUserSession(userId, sessionSecret))) {
+      return { success: false, error: "Sesión inválida" };
+    }
+
     const { data: account, error: accountError } = await dataApi
       .from("accounts")
-      .select("*")
+      .select("id")
       .eq("invite_token", token)
       .single();
     if (accountError || !account) return { success: false, error: "Not found" };
@@ -407,6 +450,82 @@ export async function joinAccountAction(token: string, userId: string) {
     }
 
     return { success: true, accountId: account.id };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
+
+export async function claimParticipantAction(params: {
+  token: string;
+  sourceUserId: string;
+  target?: { id: string; session_secret: string };
+}) {
+  try {
+    const { data: account, error: accountError } = await dataApi
+      .from("accounts")
+      .select("id")
+      .eq("invite_token", params.token)
+      .single();
+    if (accountError || !account) return { success: false, error: "Not found" };
+
+    const { data: source, error: sourceError } = await dataApi
+      .from("users")
+      .select("id, display_name, is_ghost")
+      .eq("id", params.sourceUserId)
+      .single();
+    if (sourceError || !source) {
+      return { success: false, error: "Este participante ya fue reclamado" };
+    }
+    const sourceRow = source as {
+      id: string;
+      display_name?: string;
+      displayName?: string;
+      is_ghost?: boolean;
+      isGhost?: boolean;
+    };
+    const sourceName = sourceRow.display_name || sourceRow.displayName || "Usuario";
+    if (!(sourceRow.is_ghost ?? sourceRow.isGhost)) {
+      return { success: false, error: "El usuario origen no es un invitado" };
+    }
+
+    const { data: sourceMember, error: sourceMemberError } = await dataApi
+      .from("account_members")
+      .select("id")
+      .eq("account_id", account.id)
+      .eq("user_id", params.sourceUserId);
+    throwIfApiError(sourceMemberError, "No se pudo comprobar la membresía");
+    if (!sourceMember || sourceMember.length === 0) {
+      return { success: false, error: "Este participante ya fue reclamado" };
+    }
+
+    let targetUser: AppUserPayload;
+    if (params.target) {
+      if (!(await verifyUserSession(params.target.id, params.target.session_secret))) {
+        return { success: false, error: "Sesión inválida" };
+      }
+      targetUser = await loadUserWithSecret(params.target.id);
+    } else {
+      const created = await createGhostUser(sourceName);
+      if (!created.success || !created.user) {
+        return { success: false, error: created.error || "No se pudo crear el usuario" };
+      }
+      targetUser = await loadUserWithSecret(created.user.id);
+    }
+
+    const { data: rpcData, error: rpcError } = await dataApi.rpc("claim_participant_in_account", {
+      p_account_id: account.id,
+      p_source_id: params.sourceUserId,
+      p_target_id: targetUser.id,
+    });
+    throwIfApiError(rpcError, "No se pudo reclamar al participante");
+
+    const payload = rpcPayload(rpcData);
+    return {
+      success: true,
+      accountId: account.id,
+      balance: numericBalance(payload.balance),
+      user: targetUser,
+    };
   } catch (err: any) {
     return { success: false, error: err.message };
   }

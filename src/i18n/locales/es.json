@@ -38,6 +38,7 @@
     "create_account": "Crear cuenta",
     "back_home": "Volver al inicio",
     "ghost_hint": "Se creará un perfil local sin contraseña asociado a tu navegador.",
+    "join_sign_in_hint": "Inicia sesión para unirte al grupo con tu cuenta.",
     "name_required": "El nombre es requerido",
     "guest_create_error": "Error al crear usuario invitado",
     "unexpected_error": "Ha ocurrido un error inesperado"
@@ -133,9 +134,15 @@
     "you_owe": "Debes",
     "settle_title": "Para saldar deudas",
     "individual": "Saldos individuales",
-    "owed_to_them": "Se le debe",
+    "owed_to_them": "Le deben",
     "they_owe": "Debe",
-    "settled": "Saldado"
+    "settled": "Saldado",
+    "total_spent": "Total gastado {{amount}}",
+    "export_excel": "Exportar como Excel",
+    "csv_date": "Fecha",
+    "csv_concept": "Concepto",
+    "csv_person": "Persona",
+    "csv_amount": "Importe"
   },
   "participants": {
     "title": "Participantes",
@@ -179,14 +186,29 @@
     "loading": "Cargando invitación...",
     "invited": "Has sido invitado a unirte al grupo de gastos compartidos.",
     "current_participants": "Participantes actuales",
+    "choose_who": "¿Quién eres en este grupo?",
+    "choose_hint": "Elige tu nombre si ya te añadieron, o únete como alguien nuevo.",
+    "new_participant": "Soy un participante nuevo",
+    "guest": "Invitado",
+    "registered": "Registrado",
+    "already_registered": "Este participante ya tiene cuenta. Inicia sesión con esa cuenta para unirte como él.",
     "and_more": "... y {{count}} más",
     "you_will_be": "Serás el {{n}}º participante",
     "name_placeholder": "Tu nombre (Ej. Laura)",
     "joining": "Uniéndose...",
     "join": "Unirse al grupo",
+    "sign_in": "Iniciar sesión",
     "cancel": "Cancelar y volver al inicio",
+    "claim_title": "¿Unirte como {{name}}?",
+    "claim_desc": "Ocuparás su sitio en los gastos y saldos de esta cuenta. Quien lo usara como invitado perderá el acceso a este grupo. Esta acción no es reversible.",
+    "claim_confirm": "Sí, soy {{name}}",
+    "select_required": "Elige un participante o únete como alguien nuevo.",
+    "name_required": "Indica tu nombre para unirte como participante nuevo.",
     "error_user": "No se pudo crear el usuario",
-    "error_join": "No se pudo unir a la cuenta"
+    "error_join": "No se pudo unir a la cuenta",
+    "error_claim": "No se pudo reclamar al participante",
+    "error_claimed": "Este participante ya fue reclamado. Elige otra opción.",
+    "error_session": "Tu sesión no es válida. Vuelve a entrar."
   },
   "not_found": {
     "message": "Página no encontrada"

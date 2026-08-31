@@ -4,22 +4,22 @@ overview: "Al unirse con un enlace se podrá elegir un participante existente (o
 todos:
   - id: sql-claim
     content: Añadir claim_participant_in_account en pg-features.sql (alcance por cuenta, DELETE solo si no quedan membresías) y GRANTs
-    status: in_progress
+    status: completed
   - id: actions
     content: claimParticipantAction + preview seguro + joinAccountAction con session_secret
-    status: pending
+    status: completed
   - id: join-ui
     content: Selector en JoinPage, confirmación irreversible, ramas nuevo/invitado/registrado y redirect si ya es miembro
-    status: pending
+    status: completed
   - id: login-next
     content: WelcomePage respeta ?next=/join/... (tab login, sin mandar siempre a dashboard)
-    status: pending
+    status: completed
   - id: i18n
     content: Cadenas es/en para selector, avisos y errores de reclamo
-    status: pending
+    status: completed
   - id: verify-browser
     content: Verificar en navegador las casuísticas principales y el aviso no reversible
-    status: pending
+    status: completed
 isProject: false
 ---
 

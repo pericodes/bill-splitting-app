@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import WelcomePage from "./WelcomePage";
+import { safeJoinNext } from "@/lib/joinNext";
 
 export const metadata: Metadata = {
   title: "Entrar",
@@ -8,6 +9,11 @@ export const metadata: Metadata = {
   alternates: { canonical: "/login" },
 };
 
-export default function LoginPage() {
-  return <WelcomePage />;
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ next?: string | string[] }>;
+}) {
+  const params = await searchParams;
+  return <WelcomePage nextPath={safeJoinNext(params.next)} />;
 }
