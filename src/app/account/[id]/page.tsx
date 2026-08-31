@@ -130,7 +130,7 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
                 const netAmount = parseFloat(myEntry?.netAmount || myEntry?.net_amount || "0");
 
                 return (
-                  <div key={tx.id} className="p-5 flex items-center gap-4 hover:bg-surface-container-low transition-colors cursor-pointer">
+                  <Link key={tx.id} href={`/account/${id}/expense?tx=${tx.id}`} className="p-5 flex items-center gap-4 hover:bg-surface-container-low transition-colors cursor-pointer no-underline text-inherit">
                     <div className="flex-1">
                       <h4 className="font-bold text-base text-on-surface">{tx.description}</h4>
                       <p className="text-sm text-outline mt-1">
@@ -145,7 +145,7 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
                         </p>
                       )}
                     </div>
-                  </div>
+                  </Link>
                 )
               })}
             </div>

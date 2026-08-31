@@ -2,6 +2,7 @@
 
 import React, { use, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import QRCode from 'react-qr-code';
 import { useStore } from '@/data/store';
 import Header from '@/components/layout/Header';
 import { getAccountData } from '@/actions/app';
@@ -56,8 +57,18 @@ export default function ShareAccountPage({ params }: { params: Promise<{ id: str
 
   if (!account) return null;
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(joinUrl);
+  const handleCopy = async () => {
+    if (!joinUrl) return;
+    try {
+      await navigator.clipboard.writeText(joinUrl);
+    } catch {
+      const input = document.createElement('textarea');
+      input.value = joinUrl;
+      document.body.appendChild(input);
+      input.select();
+      document.execCommand('copy');
+      document.body.removeChild(input);
+    }
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -71,14 +82,35 @@ export default function ShareAccountPage({ params }: { params: Promise<{ id: str
           <h2 className="text-2xl md:text-3xl font-bold text-primary mb-2">Invitar a participantes</h2>
           <p className="text-sm text-on-surface-variant mb-8">Comparte tu cuenta para dividir gastos fácilmente.</p>
           
-          {/* QR Code Area */}
-          <div className="mb-8 flex justify-center">
-            <div className="p-4 bg-surface-container-highest rounded-xl shadow-inner relative group cursor-pointer hover:shadow-lg transition-all duration-300">
-              <svg className="w-48 h-48 text-primary group-hover:scale-105 transition-transform duration-300" fill="currentColor" viewBox="0 0 100 100">
-                <path fillRule="evenodd" clipRule="evenodd" d="M10 10h30v30H10V10zm5 5v20h20V15H15zm45-5h30v30H60V10zm5 5v20h20V15H65zM10 60h30v30H10V60zm5 5v20h20V65H15zm65 10v15H60V60h25v15zM20 20h10v10H20V20zm50 0h10v10H70V20zm-50 50h10v10H20V70zM45 10h10v15H45V10zm0 30h10v15H45V40zm0 30h10v15H45V70zm15-15h25v10H60V55zM25 45h15v10H25V45zm15 15h15v10H40V60z" />
-              </svg>
-              <div className="absolute inset-0 bg-primary/5 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
-            </div>
+          <div className="mb-8 flex flex-col items-center">
+            <button
+              type="button"
+              onClick={handleCopy}
+              disabled={!joinUrl}
+              aria-label={copied ? 'Enlace copiado' : 'Copiar enlace de invitación'}
+              className="p-4 bg-white rounded-xl shadow-inner relative group cursor-pointer hover:shadow-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-wait focus:outline-none focus:ring-2 focus:ring-primary"
+            >
+              {joinUrl ? (
+                <QRCode
+                  value={joinUrl}
+                  size={192}
+                  fgColor="#4f46e5"
+                  bgColor="#ffffff"
+                  level="M"
+                  className="w-48 h-48 group-hover:scale-105 transition-transform duration-300"
+                />
+              ) : (
+                <div className="w-48 h-48 bg-surface-container-high rounded-lg animate-pulse" />
+              )}
+              <div className={`absolute inset-0 rounded-xl flex items-center justify-center transition-opacity ${copied ? 'bg-primary/80 opacity-100' : 'bg-primary/5 opacity-0 group-hover:opacity-100'}`}>
+                {copied && (
+                  <span className="material-symbols-outlined text-on-primary text-5xl">check</span>
+                )}
+              </div>
+            </button>
+            <p className="mt-3 text-xs text-on-surface-variant">
+              {copied ? 'Enlace copiado' : 'Escanea el código o tócalo para copiar el enlace'}
+            </p>
           </div>
           
           {/* Link Section */}

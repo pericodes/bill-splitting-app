@@ -1,0 +1,171 @@
+// =============================================================================
+// Prisma · SOLO DESARROLLO
+// Conexión: DEV_DATABASE_URL (nunca en producción; la app usa Neon Data API).
+//
+// PostgreSQL extra (CHECKs, columnas generadas STORED, app_current_user_id):
+//   prisma/sql/pg-features.sql   → pnpm db:dev:features
+//
+// RLS: Prisma no declara políticas aquí. Van en SQL y se añaden después:
+//   prisma/sql/rls.sql           → plantilla (aún no aplicada)
+// No uses `prisma db push`: puede borrar CHECKs y políticas. Tras RLS,
+// crea migraciones con --create-only y descarta cualquier DROP POLICY.
+// =============================================================================
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DEV_DATABASE_URL")
+  extensions = [pgcrypto]
+}
+
+// -----------------------------------------------------------------------------
+// 1. USUARIOS
+// RLS pendiente: ver prisma/sql/rls.sql
+// -----------------------------------------------------------------------------
+
+model User {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  displayName String   @map("display_name") @db.Text
+  /// NULL = usuario fantasma (sin cuenta de Auth).
+  authUserId  String?  @unique @map("auth_user_id") @db.Text
+  /// Columna generada STORED en Postgres (no usar @default: PG rechaza DEFAULT con otras columnas).
+  isGhost     Boolean  @map("is_ghost")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @default(now()) @map("updated_at") @db.Timestamptz
+
+  secret              UserSecret?
+  createdAccounts     Account[]          @relation("AccountCreatedBy")
+  memberships         AccountMember[]
+  createdTransactions Transaction[]      @relation("TransactionCreatedBy")
+  entries             TransactionEntry[]
+  balances            AccountBalance[]
+
+  @@map("users")
+}
+
+/// Secreto de sesión separado para no exponerlo por RLS / Data API.
+model UserSecret {
+  userId        String   @id @map("user_id") @db.Uuid
+  sessionSecret String   @default(dbgenerated("gen_random_uuid()")) @map("session_secret") @db.Uuid
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_secrets")
+}
+
+// -----------------------------------------------------------------------------
+// 2. CUENTAS
+// RLS pendiente: members via account_members + app_current_user_id()
+// -----------------------------------------------------------------------------
+
+model Account {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String    @db.Text
+  iconKey     String    @map("icon_key") @db.Text
+  currency    String    @default("EUR") @db.Text
+  inviteToken String    @unique @default(dbgenerated("gen_random_uuid()")) @map("invite_token") @db.Uuid
+  createdBy   String    @map("created_by") @db.Uuid
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  archivedAt  DateTime? @map("archived_at") @db.Timestamptz
+
+  creator      User               @relation("AccountCreatedBy", fields: [createdBy], references: [id])
+  members      AccountMember[]
+  transactions Transaction[]
+  entries      TransactionEntry[]
+  balances     AccountBalance[]
+
+  @@index([inviteToken], map: "idx_accounts_invite_token")
+  @@map("accounts")
+}
+
+// -----------------------------------------------------------------------------
+// 3. MIEMBROS
+// RLS pendiente
+// -----------------------------------------------------------------------------
+
+model AccountMember {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  accountId String   @map("account_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  /// CHECK (role IN ('owner','member')) — prisma/sql/pg-features.sql
+  role      String   @default("member") @db.Text
+  joinedAt  DateTime @default(now()) @map("joined_at") @db.Timestamptz
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id])
+
+  @@unique([accountId, userId])
+  @@index([userId], map: "idx_account_members_user")
+  @@map("account_members")
+}
+
+// -----------------------------------------------------------------------------
+// 4. LIBRO MAYOR (LEDGER)
+// RLS pendiente
+// -----------------------------------------------------------------------------
+
+model Transaction {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  accountId   String    @map("account_id") @db.Uuid
+  /// CHECK (type IN ('expense','transfer')) — prisma/sql/pg-features.sql
+  type        String    @db.Text
+  description String    @db.Text
+  totalAmount Decimal   @map("total_amount") @db.Decimal(12, 2)
+  currency    String    @db.Text
+  occurredOn  DateTime  @default(dbgenerated("CURRENT_DATE")) @map("occurred_on") @db.Date
+  createdBy   String    @map("created_by") @db.Uuid
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  deletedAt   DateTime? @map("deleted_at") @db.Timestamptz
+
+  account Account            @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  creator User               @relation("TransactionCreatedBy", fields: [createdBy], references: [id])
+  entries TransactionEntry[]
+
+  /// Índice parcial WHERE deleted_at IS NULL — prisma/sql/pg-features.sql
+  @@index([accountId, occurredOn(sort: Desc)], map: "idx_transactions_account_date")
+  @@map("transactions")
+}
+
+model TransactionEntry {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  transactionId String   @map("transaction_id") @db.Uuid
+  /// Denormalizado para performance.
+  accountId     String   @map("account_id") @db.Uuid
+  userId        String   @map("user_id") @db.Uuid
+  paidAmount    Decimal  @default(0) @map("paid_amount") @db.Decimal(12, 2)
+  owedAmount    Decimal  @default(0) @map("owed_amount") @db.Decimal(12, 2)
+  /// Columna generada STORED en Postgres (no usar @default: PG rechaza DEFAULT con otras columnas).
+  netAmount     Decimal  @map("net_amount") @db.Decimal(12, 2)
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  transaction Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  account     Account     @relation(fields: [accountId], references: [id])
+  user        User        @relation(fields: [userId], references: [id])
+
+  @@unique([transactionId, userId])
+  @@index([accountId, userId], map: "idx_entries_account_user")
+  @@map("transaction_entries")
+}
+
+// -----------------------------------------------------------------------------
+// 5. SALDOS PRECALCULADOS
+// RLS pendiente
+// -----------------------------------------------------------------------------
+
+model AccountBalance {
+  accountId String   @map("account_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  balance   Decimal  @default(0) @db.Decimal(12, 2)
+  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id])
+
+  @@id([accountId, userId])
+  @@map("account_balances")
+}

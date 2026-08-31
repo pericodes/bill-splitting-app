@@ -247,6 +247,150 @@ export async function joinAccountAction(token: string, userId: string) {
   }
 }
 
+export async function addParticipantAction(accountId: string, displayName: string) {
+  try {
+    const name = displayName.trim();
+    if (!name) {
+      return { success: false, error: "El nombre es obligatorio" };
+    }
+
+    const { data: account, error: accountError } = await dataApi
+      .from("accounts")
+      .select("id")
+      .eq("id", accountId)
+      .single();
+    if (accountError || !account) return { success: false, error: "Cuenta no encontrada" };
+
+    const { data: newUser, error: userError } = await dataApi
+      .from("users")
+      .insert({ display_name: name })
+      .select()
+      .single();
+    throwIfApiError(userError, "No se pudo crear el participante");
+
+    const { error: memberError } = await dataApi.from("account_members").insert({
+      account_id: accountId,
+      user_id: newUser.id,
+      role: "member",
+    });
+    throwIfApiError(memberError, "No se pudo añadir el miembro");
+
+    const { error: balanceError } = await dataApi.from("account_balances").insert({
+      account_id: accountId,
+      user_id: newUser.id,
+      balance: "0",
+    });
+    throwIfApiError(balanceError, "No se pudo crear el saldo");
+
+    return { success: true, user: newUser };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
+
+export async function updateParticipantNameAction(accountId: string, userId: string, displayName: string) {
+  try {
+    const name = displayName.trim();
+    if (!name) {
+      return { success: false, error: "El nombre es obligatorio" };
+    }
+    if (name.length > 60) {
+      return { success: false, error: "El nombre no puede superar 60 caracteres" };
+    }
+
+    const { data: members, error: memberError } = await dataApi
+      .from("account_members")
+      .select("id")
+      .eq("account_id", accountId)
+      .eq("user_id", userId);
+    throwIfApiError(memberError, "No se pudo comprobar la membresía");
+    if (!members || members.length === 0) {
+      return { success: false, error: "El participante no está en esta cuenta" };
+    }
+
+    const { error: updateError } = await dataApi
+      .from("users")
+      .update({ display_name: name, updated_at: new Date().toISOString() })
+      .eq("id", userId);
+    throwIfApiError(updateError, "No se pudo actualizar el nombre");
+
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
+
+export async function removeParticipantAction(accountId: string, userId: string) {
+  try {
+    const { data: members, error: memberError } = await dataApi
+      .from("account_members")
+      .select("*")
+      .eq("account_id", accountId)
+      .eq("user_id", userId);
+    throwIfApiError(memberError, "No se pudo comprobar la membresía");
+
+    const member = members?.[0];
+    if (!member) {
+      return { success: false, error: "El participante no está en esta cuenta" };
+    }
+    if (member.role === "owner") {
+      return { success: false, error: "No se puede eliminar al creador de la cuenta" };
+    }
+
+    const { data: entries, error: entriesError } = await dataApi
+      .from("transaction_entries")
+      .select("id")
+      .eq("account_id", accountId)
+      .eq("user_id", userId)
+      .limit(1);
+    throwIfApiError(entriesError, "No se pudieron leer los gastos");
+    if (entries && entries.length > 0) {
+      return {
+        success: false,
+        error: "No se puede eliminar porque ya participa en gastos. Quita esos gastos primero.",
+      };
+    }
+
+    const { error: balanceError } = await dataApi
+      .from("account_balances")
+      .delete()
+      .eq("account_id", accountId)
+      .eq("user_id", userId);
+    throwIfApiError(balanceError, "No se pudo eliminar el saldo");
+
+    const { error: deleteMemberError } = await dataApi
+      .from("account_members")
+      .delete()
+      .eq("account_id", accountId)
+      .eq("user_id", userId);
+    throwIfApiError(deleteMemberError, "No se pudo eliminar el miembro");
+
+    const { data: user, error: userError } = await dataApi
+      .from("users")
+      .select("*")
+      .eq("id", userId)
+      .single();
+    throwIfApiError(userError, "No se pudo leer el usuario");
+
+    const isGhost = !!(user?.is_ghost ?? user?.isGhost);
+    if (isGhost) {
+      const { data: otherMembers, error: otherError } = await dataApi
+        .from("account_members")
+        .select("id")
+        .eq("user_id", userId)
+        .limit(1);
+      throwIfApiError(otherError, "No se pudieron leer las cuentas del usuario");
+      if (!otherMembers || otherMembers.length === 0) {
+        await dataApi.from("users").delete().eq("id", userId);
+      }
+    }
+
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
+
 export async function addTransactionAction(
   accountId: string,
   description: string,
@@ -272,6 +416,114 @@ export async function addTransactionAction(
       const netAmount = split.paid - split.owed;
       const { error: entryError } = await dataApi.from("transaction_entries").insert({
         transaction_id: newTx.id,
+        account_id: accountId,
+        user_id: split.userId,
+        paid_amount: split.paid.toString(),
+        owed_amount: split.owed.toString(),
+      });
+      throwIfApiError(entryError, "No se pudo crear el apunte");
+
+      const { data: currBals, error: currBalError } = await dataApi
+        .from("account_balances")
+        .select("*")
+        .eq("account_id", accountId)
+        .eq("user_id", split.userId)
+        .limit(1);
+      throwIfApiError(currBalError, "No se pudo leer el saldo");
+
+      const currBal = currBals?.[0];
+      if (currBal) {
+        const newBalance = parseFloat(String(currBal.balance)) + netAmount;
+        const { error: updateError } = await dataApi
+          .from("account_balances")
+          .update({ balance: newBalance.toString() })
+          .eq("account_id", accountId)
+          .eq("user_id", split.userId);
+        throwIfApiError(updateError, "No se pudo actualizar el saldo");
+      } else {
+        const { error: insertBalError } = await dataApi.from("account_balances").insert({
+          account_id: accountId,
+          user_id: split.userId,
+          balance: netAmount.toString(),
+        });
+        throwIfApiError(insertBalError, "No se pudo crear el saldo");
+      }
+    }
+
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
+
+export async function updateTransactionAction(
+  accountId: string,
+  transactionId: string,
+  description: string,
+  amount: number,
+  splits: { userId: string; paid: number; owed: number }[]
+) {
+  try {
+    const { data: tx, error: txError } = await dataApi
+      .from("transactions")
+      .select("*")
+      .eq("id", transactionId)
+      .eq("account_id", accountId)
+      .single();
+    if (txError || !tx) return { success: false, error: "Gasto no encontrado" };
+
+    const { data: oldEntries, error: oldError } = await dataApi
+      .from("transaction_entries")
+      .select("*")
+      .eq("transaction_id", transactionId);
+    throwIfApiError(oldError, "No se pudieron leer los apuntes");
+
+    for (const entry of oldEntries || []) {
+      const userId = entry.user_id || entry.userId;
+      const paid = parseFloat(String(entry.paid_amount ?? entry.paidAmount ?? 0));
+      const owed = parseFloat(String(entry.owed_amount ?? entry.owedAmount ?? 0));
+      const oldNet = parseFloat(String(entry.net_amount ?? entry.netAmount ?? paid - owed));
+
+      const { data: currBals, error: currBalError } = await dataApi
+        .from("account_balances")
+        .select("*")
+        .eq("account_id", accountId)
+        .eq("user_id", userId)
+        .limit(1);
+      throwIfApiError(currBalError, "No se pudo leer el saldo");
+
+      const currBal = currBals?.[0];
+      if (currBal) {
+        const newBalance = parseFloat(String(currBal.balance)) - oldNet;
+        const { error: updateError } = await dataApi
+          .from("account_balances")
+          .update({ balance: newBalance.toString() })
+          .eq("account_id", accountId)
+          .eq("user_id", userId);
+        throwIfApiError(updateError, "No se pudo revertir el saldo");
+      }
+    }
+
+    const { error: deleteEntriesError } = await dataApi
+      .from("transaction_entries")
+      .delete()
+      .eq("transaction_id", transactionId);
+    throwIfApiError(deleteEntriesError, "No se pudieron eliminar los apuntes");
+
+    const { error: updateTxError } = await dataApi
+      .from("transactions")
+      .update({
+        description,
+        total_amount: amount.toString(),
+      })
+      .eq("id", transactionId)
+      .eq("account_id", accountId);
+    throwIfApiError(updateTxError, "No se pudo actualizar el gasto");
+
+    for (const split of splits) {
+      const netAmount = split.paid - split.owed;
+      const { error: entryError } = await dataApi.from("transaction_entries").insert({
+        transaction_id: transactionId,
         account_id: accountId,
         user_id: split.userId,
         paid_amount: split.paid.toString(),

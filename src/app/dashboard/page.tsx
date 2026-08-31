@@ -7,6 +7,7 @@ import BottomNav from '@/components/layout/BottomNav';
 import { useAlert } from '@/components/common/AlertProvider';
 import { getDashboardData, deleteAccountAction } from '@/actions/app';
 import { useStore } from '@/data/store';
+import { isRateLimitError } from '@/lib/errors';
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -16,33 +17,39 @@ export default function DashboardPage() {
   const [accounts, setAccounts] = useState<any[]>([]);
   const [balances, setBalances] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+
+  const userId = currentUser?.id;
 
   const fetchAccounts = React.useCallback(async () => {
-    if (!currentUser?.id) return;
+    if (!userId) return;
     setLoading(true);
+    setFetchError(null);
     
     try {
-      const res = await getDashboardData(currentUser.id);
+      const res = await getDashboardData(userId);
       if (res.success) {
         setAccounts(res.accounts || []);
         setBalances(res.balances || {});
       } else {
-        console.error("Error fetching accounts:", res.error);
+        setFetchError(res.error || "No se pudieron cargar las cuentas.");
       }
-    } catch (err) {
-      console.error("Error fetching accounts:", err);
+    } catch (err: any) {
+      setFetchError(err.message || "No se pudieron cargar las cuentas.");
     } finally {
       setLoading(false);
     }
-  }, [currentUser]);
+  }, [userId]);
 
   useEffect(() => {
     if (!currentUser) {
       router.push('/');
-    } else {
-      fetchAccounts();
     }
-  }, [currentUser, router, fetchAccounts]);
+  }, [currentUser, router]);
+
+  useEffect(() => {
+    if (userId) fetchAccounts();
+  }, [userId, fetchAccounts]);
 
   const handleDelete = (id: string, e: React.MouseEvent) => {
     e.preventDefault();
@@ -96,6 +103,23 @@ export default function DashboardPage() {
             <p className="text-sm text-on-surface-variant mt-2">Gestiona tus gastos compartidos recientes</p>
           </div>
         </div>
+
+        {fetchError && (
+          <div className="mb-6 rounded-xl border border-error-container bg-error-container/40 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <p className="text-sm text-on-error-container">
+              {isRateLimitError(fetchError)
+                ? "Neon Auth ha limitado las peticiones. Espera un momento y vuelve a intentar."
+                : fetchError}
+            </p>
+            <button
+              type="button"
+              onClick={fetchAccounts}
+              className="shrink-0 px-4 py-2 rounded-lg font-semibold bg-primary text-on-primary hover:bg-primary/90 transition-colors"
+            >
+              Reintentar
+            </button>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <Link 
