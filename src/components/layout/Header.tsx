@@ -6,12 +6,13 @@ import { usePathname, useRouter } from 'next/navigation';
 
 interface HeaderProps {
   title: string;
+  accountName?: string;
   showBack?: boolean;
   onBack?: () => void;
   rightAction?: React.ReactNode;
 }
 
-export default function Header({ title, showBack, onBack, rightAction }: HeaderProps) {
+export default function Header({ title, accountName, showBack, onBack, rightAction }: HeaderProps) {
   const router = useRouter();
 
   const handleBack = () => {
@@ -23,8 +24,8 @@ export default function Header({ title, showBack, onBack, rightAction }: HeaderP
   };
 
   return (
-    <header className="fixed top-0 left-0 w-full z-40 bg-surface-container-lowest border-b border-outline-variant flex justify-between items-center px-4 md:px-8 h-16">
-      <div className="flex items-center gap-4">
+    <header className="fixed top-0 left-0 w-full z-40 bg-surface-container-lowest border-b border-outline-variant grid grid-cols-[1fr_auto_1fr] items-center px-4 md:px-8 h-16">
+      <div className="flex items-center justify-start">
         {showBack && (
           <button 
             onClick={handleBack}
@@ -33,10 +34,11 @@ export default function Header({ title, showBack, onBack, rightAction }: HeaderP
             <span className="material-symbols-outlined">arrow_back</span>
           </button>
         )}
-        <h1 className="text-xl font-bold text-on-surface truncate max-w-[200px] sm:max-w-xs">{title}</h1>
       </div>
-      
-      <div className="flex items-center">
+      <h1 className="text-xl font-bold text-on-surface truncate max-w-[240px] sm:max-w-sm text-center">
+        {accountName ? `${accountName}: ${title}` : title}
+      </h1>
+      <div className="flex items-center justify-end">
         {rightAction}
       </div>
     </header>

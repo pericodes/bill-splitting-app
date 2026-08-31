@@ -1,5 +1,8 @@
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+"use client";
+
+import { useEffect, useState } from "react";
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
 
 export type User = {
   id: string;
@@ -22,7 +25,28 @@ export const useStore = create<AppState>()(
       logout: () => set({ currentUser: null }),
     }),
     {
-      name: 'equilibrium-storage', // localStorage key
+      name: "equilibrium-storage",
     }
   )
 );
+
+export function useHasHydrated() {
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    const persistApi = useStore.persist;
+    const finish = () => setHydrated(true);
+
+    if (!persistApi?.onFinishHydration) {
+      finish();
+      return;
+    }
+
+    const unsub = persistApi.onFinishHydration(finish);
+    if (persistApi.hasHydrated()) finish();
+
+    return unsub;
+  }, []);
+
+  return hydrated;
+}
