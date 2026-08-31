@@ -1,13 +1,16 @@
 import { createClient } from '@neondatabase/neon-js';
 
-const authUrl = process.env.NEXT_PUBLIC_NEON_AUTH_URL || process.env.VITE_NEON_AUTH_URL;
-const dataApiUrl = process.env.NEXT_PUBLIC_NEON_DATA_API_URL || process.env.VITE_NEON_DATA_API_URL;
+const authUrlEnv = process.env.NEXT_PUBLIC_NEON_AUTH_URL || process.env.VITE_NEON_AUTH_URL;
+const dataApiUrlEnv = process.env.NEXT_PUBLIC_NEON_DATA_API_URL || process.env.VITE_NEON_DATA_API_URL;
 
-if (!authUrl || !dataApiUrl) {
+if (!authUrlEnv || !dataApiUrlEnv) {
   throw new Error(
     'Faltan NEXT_PUBLIC_NEON_AUTH_URL o NEXT_PUBLIC_NEON_DATA_API_URL. Esta app usa Data API, no una conexión directa a la BD.'
   );
 }
+
+const authUrl: string = authUrlEnv;
+const dataApiUrl: string = dataApiUrlEnv;
 
 function tokenExpiresAtMs(token: string): number {
   try {
