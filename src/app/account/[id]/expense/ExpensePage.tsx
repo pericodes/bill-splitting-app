@@ -9,6 +9,7 @@ import { addTransactionAction, updateTransactionAction } from '@/actions/app';
 import { formatMoney, getCurrencySymbol, isCurrencyPrefix } from '@/lib/currency';
 import { cn } from '@/lib/utils';
 import { useAccountData } from '../AccountDataProvider';
+import { useTranslation } from 'react-i18next';
 
 function MoneyInput({
   currency,
@@ -69,6 +70,7 @@ export default function AddExpensePage({
   const { account, users, members, transactions, entries } = data;
   const isEditing = !!txId;
   const router = useRouter();
+  const { t } = useTranslation();
   const { currentUser } = useStore();
   const { showAlert } = useAlert();
 
@@ -236,14 +238,14 @@ export default function AddExpensePage({
     const numAmount = parseFloat(amount);
     
     if (!numAmount || numAmount <= 0) {
-      showAlert({ title: "Error", description: "El importe debe ser mayor que cero." });
+      showAlert({ title: t("common.error"), description: t("expense.amount_positive") });
       return;
     }
     
     if (Math.abs(totalOwed - numAmount) > 0.05 || Math.abs(totalPaid - numAmount) > 0.05) {
       showAlert({ 
-        title: "Error de cuadre", 
-        description: `Lo pagado (${totalPaid}) y lo asignado (${totalOwed}) deben coincidir con el total (${numAmount}).` 
+        title: t("expense.balance_error_title"), 
+        description: t("expense.balance_error", { paid: totalPaid, owed: totalOwed, total: numAmount }) 
       });
       return;
     }
@@ -259,16 +261,16 @@ export default function AddExpensePage({
     setSaving(true);
     try {
       const res = txId
-        ? await updateTransactionAction(id, txId, description || "Nuevo Gasto", numAmount, splitArray)
-        : await addTransactionAction(id, description || "Nuevo Gasto", numAmount, splitArray);
+        ? await updateTransactionAction(id, txId, description || t("expense.default_description"), numAmount, splitArray)
+        : await addTransactionAction(id, description || t("expense.default_description"), numAmount, splitArray);
       if (res.success) {
         await refetch();
         router.push(`/account/${id}`);
       } else {
-        showAlert({ title: "Error", description: res.error || "No se pudo guardar el gasto" });
+        showAlert({ title: t("common.error"), description: res.error || t("expense.save_error") });
       }
     } catch (err: any) {
-      showAlert({ title: "Error", description: err.message || "Error al guardar" });
+      showAlert({ title: t("common.error"), description: err.message || t("expense.save_error") });
     } finally {
       setSaving(false);
     }
@@ -282,22 +284,22 @@ export default function AddExpensePage({
   const memberLabel = (m: any) => {
     const userId = m.userId || m.user_id;
     const name = m.user?.displayName || m.user?.display_name || '';
-    return userId === currentUser?.id ? `${name} (tú)` : name;
+    return userId === currentUser?.id ? `${name} ${t("common.you_suffix")}` : name;
   };
 
   return (
     <div className="bg-surface text-on-surface min-h-screen flex flex-col antialiased pt-16">
       {saving && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-surface/80">
-          Guardando...
+          {t("expense.saving")}
         </div>
       )}
-      <Header title={isEditing ? "Editar gasto" : "Añadir gasto"} accountName={account.name} showBack />
+      <Header title={isEditing ? t("expense.edit") : t("expense.add")} accountName={account.name} showBack />
       
       <main className="flex-1 overflow-y-auto p-4 pb-24 max-w-2xl mx-auto w-full">
         <section className="bg-surface-container-lowest rounded-xl p-6 border border-outline-variant shadow-sm mb-6">
           <div className="mb-6">
-            <label className="block text-xs font-semibold text-on-surface-variant mb-1 uppercase tracking-wider">IMPORTE TOTAL</label>
+            <label className="block text-xs font-semibold text-on-surface-variant mb-1 uppercase tracking-wider">{t("expense.amount")}</label>
             <div className="relative">
               <MoneyInput
                 currency={currency}
@@ -309,12 +311,12 @@ export default function AddExpensePage({
             </div>
           </div>
           <div>
-            <label className="block text-xs font-semibold text-on-surface-variant mb-1 uppercase tracking-wider">CONCEPTO</label>
+            <label className="block text-xs font-semibold text-on-surface-variant mb-1 uppercase tracking-wider">{t("expense.concept")}</label>
             <input
               type="text"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Ej. Cena en restaurante"
+              placeholder={t("expense.concept_placeholder")}
               className="block w-full px-3 py-3 border border-outline-variant rounded-lg bg-transparent text-base text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
             />
           </div>
@@ -322,14 +324,14 @@ export default function AddExpensePage({
 
         <section className="bg-surface-container-lowest rounded-xl p-6 border border-outline-variant shadow-sm mb-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold text-on-surface">¿Quién pagó?</h2>
+            <h2 className="text-xl font-bold text-on-surface">{t("expense.who_paid")}</h2>
             {splitPayment && (
               <button
                 type="button"
                 onClick={stopSplitPayment}
                 className="text-xs font-semibold text-primary underline"
               >
-                Un solo pagador
+                {t("expense.single_payer")}
               </button>
             )}
           </div>
@@ -371,7 +373,7 @@ export default function AddExpensePage({
                 className="w-full py-2.5 border border-dashed border-primary text-primary rounded-lg font-semibold text-sm transition-colors hover:bg-primary-fixed-dim/10 flex items-center justify-center gap-2"
               >
                 <span className="material-symbols-outlined text-[20px]">call_split</span>
-                Repartir gasto
+                {t("expense.split_payment")}
               </button>
             </>
           ) : (
@@ -421,13 +423,13 @@ export default function AddExpensePage({
               </div>
 
               <div className="mt-4 pt-4 border-t border-outline-variant flex justify-between items-center text-sm">
-                <span className="text-on-surface-variant">Pendiente:</span>
+                <span className="text-on-surface-variant">{t("expense.pending")}</span>
                 <span className={`font-semibold ${Math.abs(pendingPaid) > 0.009 ? 'text-error' : 'text-on-surface'}`}>
                   {formatMoney(pendingPaid, currency)}
                 </span>
               </div>
               <div className="mt-2 flex justify-between items-center text-sm">
-                <span className="text-on-surface-variant">Total pagado:</span>
+                <span className="text-on-surface-variant">{t("expense.total_paid")}</span>
                 <span className={`font-semibold ${Math.abs(totalPaid - numAmount) > 0.05 ? 'text-error' : 'text-on-surface'}`}>
                   {totalPaid.toFixed(2)} / {numAmount.toFixed(2)}
                 </span>
@@ -438,13 +440,13 @@ export default function AddExpensePage({
 
         <section className="bg-surface-container-lowest rounded-xl p-6 border border-outline-variant shadow-sm mb-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold text-on-surface">División (Deuda)</h2>
+            <h2 className="text-xl font-bold text-on-surface">{t("expense.split_debt")}</h2>
             <button 
               type="button" 
               onClick={handleEqualSplit}
               className="text-xs font-semibold text-primary underline"
             >
-              Partes iguales
+              {t("expense.equal_parts")}
             </button>
           </div>
           
@@ -480,7 +482,7 @@ export default function AddExpensePage({
           </div>
           
           <div className="mt-4 pt-4 border-t border-outline-variant flex justify-between items-center text-sm">
-            <span className="text-on-surface-variant">Total asignado:</span>
+            <span className="text-on-surface-variant">{t("expense.total_assigned")}</span>
             <span className={`font-semibold ${Math.abs(totalOwed - (parseFloat(amount) || 0)) > 0.05 ? 'text-error' : 'text-on-surface'}`}>
               {totalOwed.toFixed(2)} / {(parseFloat(amount) || 0).toFixed(2)}
             </span>
@@ -497,7 +499,7 @@ export default function AddExpensePage({
             className="w-full bg-secondary text-on-secondary text-xl font-bold py-4 rounded-xl shadow-lg shadow-secondary/30 hover:bg-secondary/90 transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:pointer-events-none"
           >
             <span className="material-symbols-outlined">{saving ? "hourglass_top" : "check"}</span>
-            {saving ? "Guardando..." : isEditing ? "Guardar cambios" : "Guardar Gasto"}
+            {saving ? t("expense.saving") : isEditing ? t("expense.save_changes") : t("expense.save_expense")}
           </button>
         </div>
       </div>

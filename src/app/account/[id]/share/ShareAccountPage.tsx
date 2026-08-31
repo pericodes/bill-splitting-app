@@ -5,8 +5,10 @@ import { useRouter } from 'next/navigation';
 import QRCode from 'react-qr-code';
 import Header from '@/components/layout/Header';
 import { useAccountData } from '../AccountDataProvider';
+import { useTranslation } from 'react-i18next';
 
 export default function ShareAccountPage() {
+  const { t } = useTranslation();
   const { accountId: id, data } = useAccountData();
   const { account } = data;
   const router = useRouter();
@@ -36,19 +38,19 @@ export default function ShareAccountPage() {
 
   return (
     <div className="bg-surface text-on-surface min-h-screen flex flex-col pt-16">
-      <Header title="Compartir" accountName={account.name} showBack />
+      <Header title={t("share.title")} accountName={account.name} showBack />
       
       <main className="flex-grow flex flex-col items-center justify-center p-4 max-w-lg mx-auto w-full">
         <div className="w-full bg-surface-container-lowest rounded-xl shadow-lg p-6 border border-surface-variant mb-6 text-center">
-          <h2 className="text-2xl md:text-3xl font-bold text-primary mb-2">Invitar a participantes</h2>
-          <p className="text-sm text-on-surface-variant mb-8">Comparte tu cuenta para dividir gastos fácilmente.</p>
+          <h2 className="text-2xl md:text-3xl font-bold text-primary mb-2">{t("share.heading")}</h2>
+          <p className="text-sm text-on-surface-variant mb-8">{t("share.subtitle")}</p>
           
           <div className="mb-8 flex flex-col items-center">
             <button
               type="button"
               onClick={handleCopy}
               disabled={!joinUrl}
-              aria-label={copied ? 'Enlace copiado' : 'Copiar enlace de invitación'}
+              aria-label={copied ? t("share.copied_aria") : t("share.copy_aria")}
               className="p-4 bg-white rounded-xl shadow-inner relative group cursor-pointer hover:shadow-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-wait focus:outline-none focus:ring-2 focus:ring-primary"
             >
               {joinUrl ? (
@@ -70,13 +72,13 @@ export default function ShareAccountPage() {
               </div>
             </button>
             <p className="mt-3 text-xs text-on-surface-variant">
-              {copied ? 'Enlace copiado' : 'Escanea el código o tócalo para copiar el enlace'}
+              {copied ? t("share.copied") : t("share.copy_hint")}
             </p>
           </div>
           
           {/* Link Section */}
           <div className="mb-8 text-left">
-            <label className="text-xs font-semibold text-on-surface-variant mb-2 block uppercase tracking-wider">Enlace de invitación</label>
+            <label className="text-xs font-semibold text-on-surface-variant mb-2 block uppercase tracking-wider">{t("share.invitation_link")}</label>
             <div className="flex flex-col sm:flex-row gap-2 w-full">
               <div className="relative flex-grow">
                 <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-outline">
@@ -94,7 +96,7 @@ export default function ShareAccountPage() {
                 className={`border font-semibold px-4 py-3 rounded-lg transition-colors whitespace-nowrap flex justify-center items-center gap-2 ${copied ? 'bg-secondary text-on-secondary border-secondary' : 'bg-surface border-primary text-primary hover:bg-surface-container-high'}`}
               >
                 <span className="material-symbols-outlined text-[20px]">{copied ? 'check' : 'content_copy'}</span>
-                {copied ? 'Copiado' : 'Copiar'}
+                {copied ? t("share.copied") : t("share.copy")}
               </button>
             </div>
           </div>
@@ -104,7 +106,7 @@ export default function ShareAccountPage() {
           onClick={() => router.push(`/account/${id}`)}
           className="w-full bg-primary text-on-primary font-semibold text-base rounded-lg py-4 hover:bg-primary-fixed-dim shadow-sm hover:shadow-md transition-all duration-200 flex justify-center items-center gap-2"
         >
-          Volver a la cuenta
+          {t("share.back")}
         </button>
       </main>
     </div>

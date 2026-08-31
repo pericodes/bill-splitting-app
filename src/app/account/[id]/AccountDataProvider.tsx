@@ -4,6 +4,7 @@ import React, { createContext, useCallback, useContext, useEffect, useRef, useSt
 import { useRouter } from "next/navigation";
 import { getAccountData } from "@/actions/app";
 import { useHasHydrated, useStore } from "@/data/store";
+import { useTranslation } from "react-i18next";
 
 export type AccountData = {
   account: any;
@@ -48,8 +49,10 @@ export function AccountDataProvider({
   children: React.ReactNode;
 }) {
   const router = useRouter();
+  const { t } = useTranslation();
   const hasHydrated = useHasHydrated();
   const userId = useStore((s) => s.currentUser?.id);
+  const patchDashboardAccount = useStore((s) => s.patchDashboardAccount);
 
   const [data, setData] = useState<AccountData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -80,6 +83,17 @@ export function AccountDataProvider({
         dataRef.current = next;
         loadedIdRef.current = accountId;
         setData(next);
+
+        const myBal = next.balances.find(
+          (b: { user_id?: string; userId?: string }) =>
+            (b.user_id || b.userId) === userId
+        );
+        patchDashboardAccount(accountId, {
+          name: next.account.name,
+          icon: next.account.icon_key || next.account.iconKey,
+          currency: next.account.currency,
+          balance: parseFloat(String(myBal?.balance ?? 0)),
+        });
       } else {
         dataRef.current = null;
         loadedIdRef.current = null;
@@ -94,7 +108,7 @@ export function AccountDataProvider({
     } finally {
       if (gen === fetchGenRef.current) setLoading(false);
     }
-  }, [accountId, router]);
+  }, [accountId, router, userId, patchDashboardAccount]);
 
   useEffect(() => {
     if (userId) {
@@ -107,7 +121,7 @@ export function AccountDataProvider({
   }, [hasHydrated, userId, accountId, refetch, router]);
 
   if (!userId || (loading && !data) || (data && loadedIdRef.current !== accountId && loading)) {
-    return <div className="min-h-screen flex items-center justify-center">Cargando...</div>;
+    return <div className="min-h-screen flex items-center justify-center">{t("account.loading")}</div>;
   }
 
   if (!data) return null;

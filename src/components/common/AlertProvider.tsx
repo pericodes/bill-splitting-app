@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, ReactNode } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
+import { useTranslation } from "react-i18next";
 
 type AlertOptions = {
   title: string;
@@ -29,6 +30,7 @@ export const useAlert = () => {
 };
 
 export const AlertProvider = ({ children }: { children: ReactNode }) => {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [isConfirm, setIsConfirm] = useState(false);
   const [options, setOptions] = useState<AlertOptions | null>(null);
@@ -74,7 +76,7 @@ export const AlertProvider = ({ children }: { children: ReactNode }) => {
                   onClick={handleCancel}
                   className="px-4 py-2 rounded-lg font-semibold text-on-surface-variant hover:bg-surface-container-high transition-colors"
                 >
-                  {options?.cancelText || "Cancelar"}
+                  {options?.cancelText || t("common.cancel")}
                 </button>
               )}
               <button
@@ -85,7 +87,7 @@ export const AlertProvider = ({ children }: { children: ReactNode }) => {
                     : "bg-primary text-on-primary hover:bg-primary/90"
                 }`}
               >
-                {options?.confirmText || "Aceptar"}
+                {options?.confirmText || t("common.accept")}
               </button>
             </div>
           </Dialog.Content>

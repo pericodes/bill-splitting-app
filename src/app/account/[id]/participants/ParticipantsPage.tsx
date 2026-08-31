@@ -2,14 +2,18 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import * as Dialog from '@radix-ui/react-dialog';
 import { useStore } from '@/data/store';
 import Header from '@/components/layout/Header';
 import { useAlert } from '@/components/common/AlertProvider';
 import { addParticipantAction, updateParticipantNameAction, removeParticipantAction } from '@/actions/app';
 import { useAccountData } from '../AccountDataProvider';
+import { useTranslation } from 'react-i18next';
 
 export default function ParticipantsPage() {
+  const { t } = useTranslation();
+  const router = useRouter();
   const { accountId: id, data, refetch } = useAccountData();
   const { account, users, members } = data;
   const { currentUser, setCurrentUser } = useStore();
@@ -62,8 +66,8 @@ export default function ParticipantsPage() {
 
     if (nameAlreadyUsed(name, dialogMode === 'edit' ? editingUserId : null)) {
       showAlert({
-        title: "Nombre duplicado",
-        description: `Ya hay un participante llamado ${name} en esta cuenta.`,
+        title: t("participants.duplicate_title"),
+        description: t("participants.duplicate_desc", { name }),
       });
       return;
     }
@@ -73,13 +77,13 @@ export default function ParticipantsPage() {
       if (dialogMode === 'add') {
         const res = await addParticipantAction(id, name);
         if (!res.success) {
-          showAlert({ title: "Error", description: res.error || "No se pudo añadir el participante." });
+          showAlert({ title: t("common.error"), description: res.error || t("participants.add_error") });
           return;
         }
       } else if (editingUserId) {
         const res = await updateParticipantNameAction(id, editingUserId, name);
         if (!res.success) {
-          showAlert({ title: "Error", description: res.error || "No se pudo actualizar el nombre." });
+          showAlert({ title: t("common.error"), description: res.error || t("participants.update_error") });
           return;
         }
         if (currentUser && editingUserId === currentUser.id) {
@@ -89,7 +93,7 @@ export default function ParticipantsPage() {
       closeDialog();
       await refetch();
     } catch (err: any) {
-      showAlert({ title: "Error", description: err.message || "No se pudo guardar." });
+      showAlert({ title: t("common.error"), description: err.message || t("participants.save_error") });
     } finally {
       setSaving(false);
     }
@@ -97,14 +101,14 @@ export default function ParticipantsPage() {
 
   const handleDelete = (userId: string, name: string) => {
     showConfirm({
-      title: "Eliminar participante",
-      description: `¿Quieres eliminar a ${name} de esta cuenta?`,
+      title: t("participants.delete_title"),
+      description: t("participants.delete_desc", { name }),
       isDestructive: true,
-      confirmText: "Eliminar",
+      confirmText: t("common.delete"),
       onConfirm: async () => {
         const res = await removeParticipantAction(id, userId);
         if (!res.success) {
-          showAlert({ title: "Error", description: res.error || "No se pudo eliminar el participante." });
+          showAlert({ title: t("common.error"), description: res.error || t("participants.delete_error") });
           return;
         }
         await refetch();
@@ -114,7 +118,12 @@ export default function ParticipantsPage() {
 
   return (
     <div className="bg-background text-on-background min-h-screen font-body-lg flex flex-col pt-16">
-      <Header title="Participantes" accountName={account.name} showBack />
+      <Header
+        title={t("participants.title")}
+        accountName={account.name}
+        showBack
+        onBack={() => router.replace(`/account/${id}`)}
+      />
       
       <main className="flex-grow px-4 py-6 max-w-3xl mx-auto w-full">
         <div className="space-y-2 mb-6">
@@ -130,17 +139,17 @@ export default function ParticipantsPage() {
                 <div className="flex items-center gap-4 min-w-0">
                   <div className="min-w-0">
                     <p className="font-semibold text-base text-on-surface truncate">
-                      {name} {isSelf ? "(tú)" : ""}
+                      {name} {isSelf ? t("common.you_suffix") : ""}
                     </p>
                     <p className="text-sm text-on-surface-variant">
-                      {m.user?.isGhost || m.user?.is_ghost ? "Invitado" : "Registrado"} • {isOwner ? "Creador" : "Miembro"}
+                      {m.user?.isGhost || m.user?.is_ghost ? t("participants.guest") : t("participants.registered")} • {isOwner ? t("participants.owner") : t("participants.member")}
                     </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-1 shrink-0 ml-2">
                   <button
                     type="button"
-                    aria-label={`Editar ${name}`}
+                    aria-label={t("participants.edit_aria", { name })}
                     onClick={() => openEditDialog(userId, name)}
                     className="text-on-surface-variant hover:text-primary transition-colors p-2 rounded-full hover:bg-surface-container-high focus:outline-none"
                   >
@@ -149,7 +158,7 @@ export default function ParticipantsPage() {
                   {canDelete && (
                     <button
                       type="button"
-                      aria-label={`Eliminar ${name}`}
+                      aria-label={t("participants.delete_aria", { name })}
                       onClick={() => handleDelete(userId, name)}
                       className="text-on-surface-variant hover:text-error transition-colors p-2 rounded-full hover:bg-error-container/50 focus:outline-none"
                     >
@@ -175,19 +184,19 @@ export default function ParticipantsPage() {
             className="w-full py-3 border border-dashed border-primary text-primary rounded-lg font-semibold text-sm tracking-wider transition-colors hover:bg-primary-fixed-dim/10 flex items-center justify-center gap-2"
           >
             <span className="material-symbols-outlined text-[20px]">person_add</span>
-            Añadir participantes
+            {t("participants.add")}
           </button>
 
           <Dialog.Portal>
             <Dialog.Overlay className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50" />
             <Dialog.Content className="fixed left-1/2 top-1/2 w-full max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-xl bg-surface p-6 shadow-lg z-50">
               <Dialog.Title className="text-xl font-bold text-on-surface">
-                {dialogMode === 'add' ? 'Añadir participante' : 'Editar participante'}
+                {dialogMode === 'add' ? t("participants.add_title") : t("participants.edit_title")}
               </Dialog.Title>
               <Dialog.Description className="mt-2 text-sm text-on-surface-variant">
                 {dialogMode === 'add'
-                  ? 'Añádelo por su nombre para incluirlo en los gastos. Podrá unirse más tarde con el enlace de invitación.'
-                  : 'Cambia el nombre con el que aparece en esta cuenta.'}
+                  ? t("participants.add_desc")
+                  : t("participants.edit_desc")}
               </Dialog.Description>
               <form onSubmit={handleSaveName} className="mt-4 flex flex-col gap-4">
                 <input
@@ -197,7 +206,7 @@ export default function ParticipantsPage() {
                   maxLength={60}
                   value={nameInput}
                   onChange={(e) => setNameInput(e.target.value)}
-                  placeholder="Nombre (Ej. Laura)"
+                  placeholder={t("participants.name_placeholder")}
                   disabled={saving}
                   className="w-full px-4 py-3 border border-outline-variant rounded-lg bg-surface-container-lowest text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary disabled:opacity-50"
                 />
@@ -208,7 +217,7 @@ export default function ParticipantsPage() {
                       disabled={saving}
                       className="px-4 py-2 rounded-lg font-semibold text-on-surface-variant hover:bg-surface-container-high transition-colors disabled:opacity-50"
                     >
-                      Cancelar
+                      {t("common.cancel")}
                     </button>
                   </Dialog.Close>
                   <button
@@ -217,8 +226,8 @@ export default function ParticipantsPage() {
                     className="px-4 py-2 rounded-lg font-semibold bg-primary text-on-primary hover:bg-primary/90 transition-colors disabled:opacity-50"
                   >
                     {saving
-                      ? (dialogMode === 'add' ? 'Añadiendo...' : 'Guardando...')
-                      : (dialogMode === 'add' ? 'Añadir' : 'Guardar')}
+                      ? (dialogMode === 'add' ? t("participants.adding") : t("common.saving"))
+                      : (dialogMode === 'add' ? t("participants.add_btn") : t("common.save"))}
                   </button>
                 </div>
               </form>
@@ -231,7 +240,7 @@ export default function ParticipantsPage() {
           className="mt-3 w-full py-3 text-on-surface-variant hover:text-primary rounded-lg font-semibold text-sm transition-colors flex items-center justify-center gap-2"
         >
           <span className="material-symbols-outlined text-[20px]">share</span>
-          Invitar con un enlace
+          {t("participants.invite_link")}
         </Link>
       </main>
     </div>

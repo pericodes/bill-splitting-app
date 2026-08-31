@@ -8,41 +8,48 @@ import { useAlert } from '@/components/common/AlertProvider';
 import { getDashboardData, deleteAccountAction } from '@/actions/app';
 import { useHasHydrated, useStore } from '@/data/store';
 import { isRateLimitError } from '@/lib/errors';
+import { neonSignOut } from '@/lib/clientAuth';
+import { useTranslation } from 'react-i18next';
 
 export default function DashboardPage() {
   const router = useRouter();
+  const { t } = useTranslation();
   const hasHydrated = useHasHydrated();
-  const { currentUser, logout } = useStore();
+  const {
+    currentUser,
+    logout,
+    dashboardUserId,
+    dashboardAccounts: accounts,
+    dashboardBalances: balances,
+    setDashboardData,
+    removeDashboardAccount,
+  } = useStore();
   const { showConfirm } = useAlert();
-  
-  const [accounts, setAccounts] = useState<any[]>([]);
-  const [balances, setBalances] = useState<Record<string, number>>({});
+
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
-  const hasDataRef = React.useRef(false);
 
   const userId = currentUser?.id;
+  const hasCache = !!userId && dashboardUserId === userId;
 
   const fetchAccounts = React.useCallback(async () => {
     if (!userId) return;
     setFetchError(null);
-    if (!hasDataRef.current) setLoading(true);
+    if (useStore.getState().dashboardUserId !== userId) setLoading(true);
 
     try {
       const res = await getDashboardData(userId);
       if (res.success) {
-        setAccounts(res.accounts || []);
-        setBalances(res.balances || {});
-        hasDataRef.current = true;
+        setDashboardData(userId, res.accounts || [], res.balances || {});
       } else {
-        setFetchError(res.error || "No se pudieron cargar las cuentas.");
+        setFetchError(res.error || t("dashboard.load_error"));
       }
     } catch (err: any) {
-      setFetchError(err.message || "No se pudieron cargar las cuentas.");
+      setFetchError(err.message || t("dashboard.load_error"));
     } finally {
       setLoading(false);
     }
-  }, [userId]);
+  }, [userId, setDashboardData, t]);
 
   useEffect(() => {
     if (!hasHydrated) return;
@@ -59,47 +66,49 @@ export default function DashboardPage() {
     e.preventDefault();
     e.stopPropagation();
     showConfirm({
-      title: 'Eliminar cuenta',
-      description: '¿Estás seguro de que deseas eliminar esta cuenta? Esta acción no se puede deshacer.',
+      title: t("dashboard.delete_title"),
+      description: t("dashboard.delete_desc"),
       isDestructive: true,
-      confirmText: 'Eliminar',
+      confirmText: t("common.delete"),
       onConfirm: async () => {
         const res = await deleteAccountAction(id);
         if (!res.success) {
           console.error("Error deleting account:", res.error);
-          alert("Error al eliminar la cuenta");
+          alert(t("dashboard.delete_error"));
         } else {
+          removeDashboardAccount(id);
           fetchAccounts();
         }
       }
     });
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await neonSignOut();
     logout();
     router.push('/');
   };
 
   if (!currentUser) {
-    return <div className="min-h-screen flex items-center justify-center">Cargando dashboard...</div>;
+    return <div className="min-h-screen flex items-center justify-center">{t("dashboard.loading")}</div>;
   }
 
-  if (loading && !hasDataRef.current) {
-    return <div className="min-h-screen flex items-center justify-center">Cargando dashboard...</div>;
+  if (loading && !hasCache) {
+    return <div className="min-h-screen flex items-center justify-center">{t("dashboard.loading")}</div>;
   }
 
   return (
     <div className="bg-background text-on-surface min-h-screen flex flex-col pb-24 md:pb-0 relative">
       {/* Top App Bar (Web) */}
       <header className="hidden md:flex justify-between items-center w-full px-8 h-16 bg-surface-container-lowest border-b border-outline-variant sticky top-0 z-30">
-        <h1 className="text-xl font-bold text-on-surface">Gastos Compartidos</h1>
+        <h1 className="text-xl font-bold text-on-surface">{t("common.app_name")}</h1>
         <nav className="flex gap-6 items-center">
-          <Link href="/profile" className="text-xs font-semibold text-primary uppercase tracking-wider hover:bg-surface-container-high px-4 py-2 rounded-lg transition-colors">Ver perfil</Link>
+          <Link href="/profile" className="text-xs font-semibold text-primary uppercase tracking-wider hover:bg-surface-container-high px-4 py-2 rounded-lg transition-colors">{t("dashboard.view_profile")}</Link>
           <button 
             onClick={handleLogout}
             className="text-xs font-semibold text-error uppercase tracking-wider hover:bg-error-container/20 px-4 py-2 rounded-lg transition-colors"
           >
-            Cerrar Sesión
+            {t("common.close_session")}
           </button>
         </nav>
       </header>
@@ -107,8 +116,8 @@ export default function DashboardPage() {
       <main className="flex-grow w-full max-w-5xl mx-auto px-4 md:px-6 pt-6 pb-8">
         <div className="flex justify-between items-end mb-6">
           <div>
-            <h2 className="text-2xl md:text-3xl font-bold text-on-surface">Mis Cuentas</h2>
-            <p className="text-sm text-on-surface-variant mt-2">Gestiona tus gastos compartidos recientes</p>
+            <h2 className="text-2xl md:text-3xl font-bold text-on-surface">{t("dashboard.my_accounts")}</h2>
+            <p className="text-sm text-on-surface-variant mt-2">{t("dashboard.subtitle")}</p>
           </div>
         </div>
 
@@ -116,7 +125,7 @@ export default function DashboardPage() {
           <div className="mb-6 rounded-xl border border-error-container bg-error-container/40 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <p className="text-sm text-on-error-container">
               {isRateLimitError(fetchError)
-                ? "Neon Auth ha limitado las peticiones. Espera un momento y vuelve a intentar."
+                ? t("dashboard.rate_limit")
                 : fetchError}
             </p>
             <button
@@ -124,7 +133,7 @@ export default function DashboardPage() {
               onClick={fetchAccounts}
               className="shrink-0 px-4 py-2 rounded-lg font-semibold bg-primary text-on-primary hover:bg-primary/90 transition-colors"
             >
-              Reintentar
+              {t("common.retry")}
             </button>
           </div>
         )}
@@ -137,7 +146,7 @@ export default function DashboardPage() {
             <div className="bg-surface-container-lowest/20 rounded-full p-3 mb-2 group-hover:scale-110 transition-transform">
               <span className="material-symbols-outlined text-[32px]">add</span>
             </div>
-            <span className="text-xs font-semibold uppercase tracking-wider mt-2">Crear nueva cuenta</span>
+            <span className="text-xs font-semibold uppercase tracking-wider mt-2">{t("dashboard.create_account")}</span>
           </Link>
 
           {accounts.map(account => {
@@ -168,7 +177,7 @@ export default function DashboardPage() {
                 <h3 className="text-xl font-semibold text-on-surface mt-auto">{account.name}</h3>
                 
                 <div className="mt-auto border-t border-surface-variant pt-2 flex justify-between items-center relative z-10">
-                  <span className="text-sm text-on-surface-variant">Mi saldo</span>
+                  <span className="text-sm text-on-surface-variant">{t("dashboard.my_balance")}</span>
                   <span className={`text-base font-semibold ${myBalance >= 0 ? (myBalance === 0 ? 'text-on-surface' : 'text-secondary') : 'text-error'}`}>
                     {myBalance > 0 ? '+' : ''}{myBalance.toFixed(2)} {account.currency}
                   </span>

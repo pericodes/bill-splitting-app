@@ -1,9 +1,141 @@
 "use server"
 
 import { dataApi, throwIfApiError } from "@/data/dataApi";
+import { verifyNeonSession } from "@/lib/neonSession";
 
 function userIdOf(row: { user_id?: string; userId?: string }) {
   return row.user_id || row.userId;
+}
+
+type AppUserPayload = {
+  id: string;
+  display_name: string;
+  is_ghost: boolean;
+  session_secret?: string;
+};
+
+function toAppUser(
+  user: { id: string; display_name?: string; displayName?: string; is_ghost?: boolean; isGhost?: boolean },
+  secret?: { session_secret?: string; sessionSecret?: string } | null
+): AppUserPayload {
+  return {
+    id: user.id,
+    display_name: user.display_name || user.displayName || "",
+    is_ghost: !!(user.is_ghost ?? user.isGhost),
+    session_secret: secret?.session_secret || secret?.sessionSecret,
+  };
+}
+
+function fallbackDisplayName(name?: string, email?: string) {
+  const fromName = name?.trim();
+  if (fromName) return fromName.slice(0, 60);
+  const fromEmail = email?.split("@")[0]?.trim();
+  if (fromEmail) return fromEmail.slice(0, 60);
+  return "Usuario";
+}
+
+async function loadUserWithSecret(userId: string): Promise<AppUserPayload> {
+  const { data: user, error: userError } = await dataApi.from("users").select("*").eq("id", userId).single();
+  throwIfApiError(userError, "No se pudo leer el usuario");
+  const { data: secrets, error: secretError } = await dataApi
+    .from("user_secrets")
+    .select("*")
+    .eq("user_id", userId);
+  throwIfApiError(secretError, "No se pudo leer el secreto de sesión");
+  return toAppUser(user, secrets?.[0] || null);
+}
+
+async function findUserByAuthId(authUserId: string) {
+  const { data, error } = await dataApi.from("users").select("*").eq("auth_user_id", authUserId);
+  throwIfApiError(error, "No se pudo buscar el usuario");
+  return data?.[0] || null;
+}
+
+async function createRegisteredUserRow(authUserId: string, displayName: string): Promise<AppUserPayload> {
+  const { data: newUser, error: userError } = await dataApi
+    .from("users")
+    .insert({ display_name: displayName, auth_user_id: authUserId })
+    .select()
+    .single();
+  throwIfApiError(userError, "No se pudo crear el usuario");
+
+  const { data: newSecret, error: secretError } = await dataApi
+    .from("user_secrets")
+    .insert({ user_id: newUser.id })
+    .select()
+    .single();
+  throwIfApiError(secretError, "No se pudo crear el secreto de sesión");
+
+  return toAppUser(newUser, newSecret);
+}
+
+export async function completeAuthAction(params: {
+  authToken: string;
+  displayName?: string;
+  ghost?: { id: string; session_secret: string };
+}) {
+  try {
+    const session = await verifyNeonSession(params.authToken);
+    const desiredName = params.displayName?.trim().slice(0, 60);
+
+    if (params.ghost) {
+      const { data: secrets, error: secretError } = await dataApi
+        .from("user_secrets")
+        .select("*")
+        .eq("user_id", params.ghost.id);
+      throwIfApiError(secretError, "No se pudo comprobar la sesión de invitado");
+      const secret = secrets?.[0];
+      const storedSecret = secret?.session_secret || secret?.sessionSecret;
+      if (!secret || storedSecret !== params.ghost.session_secret) {
+        return { success: false, error: "Sesión de invitado inválida" };
+      }
+
+      const { data: ghost, error: ghostError } = await dataApi
+        .from("users")
+        .select("*")
+        .eq("id", params.ghost.id)
+        .single();
+      throwIfApiError(ghostError, "No se pudo leer el usuario invitado");
+      if (!(ghost.is_ghost ?? ghost.isGhost)) {
+        return { success: false, error: "Este usuario ya tiene una cuenta" };
+      }
+
+      const existing = await findUserByAuthId(session.authUserId);
+      if (!existing) {
+        const { error: updateError } = await dataApi
+          .from("users")
+          .update({
+            auth_user_id: session.authUserId,
+            display_name: desiredName || ghost.display_name || ghost.displayName,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", params.ghost.id);
+        throwIfApiError(updateError, "No se pudo vincular la cuenta");
+        return { success: true, user: await loadUserWithSecret(params.ghost.id) };
+      }
+
+      if (existing.id === params.ghost.id) {
+        return { success: true, user: await loadUserWithSecret(params.ghost.id) };
+      }
+
+      const { error: mergeError } = await dataApi.rpc("merge_ghost_into_user", {
+        p_ghost_id: params.ghost.id,
+        p_target_id: existing.id,
+      });
+      throwIfApiError(mergeError, "No se pudieron transferir las cuentas");
+      return { success: true, user: await loadUserWithSecret(existing.id) };
+    }
+
+    const existing = await findUserByAuthId(session.authUserId);
+    if (existing) {
+      return { success: true, user: await loadUserWithSecret(existing.id) };
+    }
+
+    const displayName = desiredName || fallbackDisplayName(session.name, session.email);
+    return { success: true, user: await createRegisteredUserRow(session.authUserId, displayName) };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
 }
 
 async function applyBalanceDeltas(
@@ -81,13 +213,26 @@ export async function getDashboardData(userId: string) {
     }
 
     const [accsRes, balsRes] = await Promise.all([
-      dataApi.from("accounts").select("*").in("id", accountIds),
-      dataApi.from("account_balances").select("*").eq("user_id", userId).in("account_id", accountIds),
+      dataApi.from("accounts").select("id, name, icon_key, currency").in("id", accountIds),
+      dataApi.from("account_balances").select("account_id, balance").eq("user_id", userId).in("account_id", accountIds),
     ]);
     throwIfApiError(accsRes.error, "No se pudieron leer las cuentas");
     throwIfApiError(balsRes.error, "No se pudieron leer los saldos");
     const accs = accsRes.data;
     const bals = balsRes.data;
+
+    const accounts = (accs || []).map((a: {
+      id: string;
+      name: string;
+      currency: string;
+      icon_key?: string;
+      iconKey?: string;
+    }) => ({
+      id: a.id,
+      name: a.name,
+      currency: a.currency,
+      icon_key: a.icon_key || a.iconKey,
+    }));
 
     const balanceMap: Record<string, number> = {};
     (bals || []).forEach((b: { account_id: string; accountId?: string; balance: string | number }) => {
@@ -95,7 +240,7 @@ export async function getDashboardData(userId: string) {
       if (key) balanceMap[key] = parseFloat(String(b.balance));
     });
 
-    return { success: true, accounts: accs || [], balances: balanceMap };
+    return { success: true, accounts, balances: balanceMap };
   } catch (err: any) {
     return { success: false, error: err.message };
   }

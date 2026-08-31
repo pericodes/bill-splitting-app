@@ -4,11 +4,13 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useStore } from '@/data/store';
 import { getAccountPreviewAction, joinAccountAction, createGhostUser } from '@/actions/app';
+import { useTranslation } from 'react-i18next';
 
 export default function JoinPage({ token }: { token: string }) {
   const router = useRouter();
+  const { t } = useTranslation();
   
-  const { currentUser, setCurrentUser } = useStore();
+  const { currentUser, setCurrentUser, patchDashboardAccount } = useStore();
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(true);
   const [account, setAccount] = useState<any>(null);
@@ -37,7 +39,7 @@ export default function JoinPage({ token }: { token: string }) {
   }, [token, router]);
 
   if (loading) {
-    return <div className="h-screen flex items-center justify-center">Cargando invitación...</div>;
+    return <div className="h-screen flex items-center justify-center">{t("join.loading")}</div>;
   }
 
   if (!account) return null;
@@ -61,7 +63,7 @@ export default function JoinPage({ token }: { token: string }) {
         setCurrentUser(res.user);
         activeUserId = res.user.id;
       } else {
-        alert("Error creating user");
+        alert(t("join.error_user"));
         setJoining(false);
         return;
       }
@@ -69,10 +71,16 @@ export default function JoinPage({ token }: { token: string }) {
 
     if (activeUserId) {
       const res = await joinAccountAction(token, activeUserId);
-      if (res.success) {
+      if (res.success && res.accountId) {
+        patchDashboardAccount(res.accountId, {
+          name: account.name,
+          icon: account.icon_key || account.iconKey,
+          currency: account.currency,
+          balance: 0,
+        });
         router.push(`/account/${res.accountId}`);
       } else {
-        alert("Error joining account");
+        alert(t("join.error_join"));
         setJoining(false);
       }
     }
@@ -94,11 +102,11 @@ export default function JoinPage({ token }: { token: string }) {
         
         <div className="text-center mb-8 w-full">
           <h1 className="text-2xl font-bold text-on-surface mb-2">{account.name}</h1>
-          <p className="text-base text-on-surface-variant">Has sido invitado a unirte al grupo de gastos compartidos.</p>
+          <p className="text-base text-on-surface-variant">{t("join.invited")}</p>
         </div>
         
         <div className="w-full bg-surface-container-lowest rounded-xl border border-outline-variant shadow-sm p-4 mb-8 flex flex-col">
-          <h2 className="text-xs font-semibold text-outline mb-4 uppercase tracking-wider">Participantes Actuales</h2>
+          <h2 className="text-xs font-semibold text-outline mb-4 uppercase tracking-wider">{t("join.current_participants")}</h2>
           <ul className="flex flex-col gap-2">
             {currentMembers.slice(0, 3).map((user, i) => (
               <li key={i} className="flex items-center gap-2 text-base font-semibold text-on-surface">
@@ -108,13 +116,13 @@ export default function JoinPage({ token }: { token: string }) {
             ))}
             {currentMembers.length > 3 && (
               <li className="flex items-center gap-2 text-sm text-outline italic">
-                ... y {currentMembers.length - 3} más
+                {t("join.and_more", { count: currentMembers.length - 3 })}
               </li>
             )}
           </ul>
           <div className="mt-4 pt-2 border-t border-surface-variant flex items-center gap-2">
             <span className="material-symbols-outlined text-secondary text-[20px]">group_add</span>
-            <span className="text-sm text-on-surface-variant">Serás el {currentMembers.length + 1}º participante</span>
+            <span className="text-sm text-on-surface-variant">{t("join.you_will_be", { n: currentMembers.length + 1 })}</span>
           </div>
         </div>
 
@@ -126,7 +134,7 @@ export default function JoinPage({ token }: { token: string }) {
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Tu nombre (Ej. Laura)"
+                placeholder={t("join.name_placeholder")}
                 className="w-full px-4 py-3 border border-outline-variant rounded-lg bg-surface-container-lowest text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
                 disabled={joining}
               />
@@ -139,12 +147,12 @@ export default function JoinPage({ token }: { token: string }) {
             className="w-full bg-primary hover:bg-primary-container text-on-primary font-bold text-xl rounded-xl py-4 px-6 transition-colors duration-200 shadow-md flex items-center justify-center gap-2 disabled:opacity-50"
           >
             <span className="material-symbols-outlined">login</span>
-            {joining ? 'Uniéndose...' : 'Unirse al Grupo'}
+            {joining ? t("join.joining") : t("join.join")}
           </button>
         </form>
         
         <button onClick={() => router.push('/')} className="mt-6 text-sm text-outline hover:text-on-surface transition-colors" disabled={joining}>
-          Cancelar y volver al inicio
+          {t("join.cancel")}
         </button>
       </main>
     </div>

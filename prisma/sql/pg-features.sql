@@ -114,3 +114,96 @@ END $$;
 CREATE INDEX IF NOT EXISTS idx_transactions_account_date_active
   ON transactions (account_id, occurred_on DESC)
   WHERE deleted_at IS NULL;
+
+-- Fusiona un usuario fantasma en uno registrado y borra el fantasma.
+-- Atómico: Data API no puede transaccionar varias tablas a la vez.
+CREATE OR REPLACE FUNCTION merge_ghost_into_user(p_ghost_id uuid, p_target_id uuid)
+RETURNS json
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  IF p_ghost_id = p_target_id THEN
+    RETURN json_build_object('success', true, 'target_id', p_target_id);
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM users WHERE id = p_ghost_id AND is_ghost IS TRUE
+  ) THEN
+    RAISE EXCEPTION 'El usuario origen no es un invitado';
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM users WHERE id = p_target_id) THEN
+    RAISE EXCEPTION 'El usuario destino no existe';
+  END IF;
+
+  UPDATE accounts SET created_by = p_target_id WHERE created_by = p_ghost_id;
+  UPDATE transactions SET created_by = p_target_id WHERE created_by = p_ghost_id;
+
+  UPDATE transaction_entries AS t
+  SET
+    paid_amount = t.paid_amount + g.paid_amount,
+    owed_amount = t.owed_amount + g.owed_amount
+  FROM transaction_entries AS g
+  WHERE g.user_id = p_ghost_id
+    AND t.user_id = p_target_id
+    AND t.transaction_id = g.transaction_id;
+
+  DELETE FROM transaction_entries AS g
+  WHERE g.user_id = p_ghost_id
+    AND EXISTS (
+      SELECT 1 FROM transaction_entries AS t
+      WHERE t.user_id = p_target_id AND t.transaction_id = g.transaction_id
+    );
+
+  UPDATE transaction_entries SET user_id = p_target_id WHERE user_id = p_ghost_id;
+
+  UPDATE account_balances AS t
+  SET
+    balance = t.balance + g.balance,
+    updated_at = now()
+  FROM account_balances AS g
+  WHERE g.user_id = p_ghost_id
+    AND t.user_id = p_target_id
+    AND t.account_id = g.account_id;
+
+  DELETE FROM account_balances AS g
+  WHERE g.user_id = p_ghost_id
+    AND EXISTS (
+      SELECT 1 FROM account_balances AS t
+      WHERE t.user_id = p_target_id AND t.account_id = g.account_id
+    );
+
+  UPDATE account_balances SET user_id = p_target_id WHERE user_id = p_ghost_id;
+
+  UPDATE account_members AS t
+  SET role = 'owner'
+  FROM account_members AS g
+  WHERE g.user_id = p_ghost_id
+    AND t.user_id = p_target_id
+    AND t.account_id = g.account_id
+    AND g.role = 'owner';
+
+  DELETE FROM account_members AS g
+  WHERE g.user_id = p_ghost_id
+    AND EXISTS (
+      SELECT 1 FROM account_members AS t
+      WHERE t.user_id = p_target_id AND t.account_id = g.account_id
+    );
+
+  UPDATE account_members SET user_id = p_target_id WHERE user_id = p_ghost_id;
+
+  DELETE FROM users WHERE id = p_ghost_id;
+
+  RETURN json_build_object('success', true, 'target_id', p_target_id);
+END;
+$$;
+
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'anonymous') THEN
+    GRANT EXECUTE ON FUNCTION merge_ghost_into_user(uuid, uuid) TO anonymous;
+  END IF;
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authenticated') THEN
+    GRANT EXECUTE ON FUNCTION merge_ghost_into_user(uuid, uuid) TO authenticated;
+  END IF;
+END $$;
