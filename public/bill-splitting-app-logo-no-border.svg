@@ -1,0 +1,15 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Fondo plano completo en azul sin bordes de tarjeta -->
+  <rect width="512" height="512" fill="#1A7CFB"/>
+  
+  <g transform="translate(56, 56)">
+    <!-- Círculo Izquierdo -->
+    <circle cx="150" cy="200" r="110" fill="#FFFFFF" />
+    
+    <!-- Círculo Derecho -->
+    <circle cx="250" cy="200" r="110" fill="#FFFFFF" opacity="0.8" />
+    
+    <!-- Recorte en Espacio Negativo (Intersección en el mismo azul de fondo) -->
+    <path d="M 200 110 A 110 110 0 0 1 200 290 A 110 110 0 0 1 200 110 Z" fill="#1A7CFB"/>
+  </g>
+</svg>

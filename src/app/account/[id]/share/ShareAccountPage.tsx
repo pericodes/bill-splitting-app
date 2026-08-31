@@ -55,7 +55,7 @@ export default function ShareAccountPage() {
                 <QRCode
                   value={joinUrl}
                   size={192}
-                  fgColor="#4f46e5"
+                  fgColor="#026ffb"
                   bgColor="#ffffff"
                   level="M"
                   className="w-48 h-48 group-hover:scale-105 transition-transform duration-300"
