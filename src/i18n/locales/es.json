@@ -36,6 +36,7 @@
     "enter": "Entrar",
     "enter_as_guest": "Entrar como invitado",
     "create_account": "Crear cuenta",
+    "back_home": "Volver al inicio",
     "ghost_hint": "Se creará un perfil local sin contraseña asociado a tu navegador.",
     "name_required": "El nombre es requerido",
     "guest_create_error": "Error al crear usuario invitado",
@@ -189,5 +190,8 @@
   },
   "not_found": {
     "message": "Página no encontrada"
+  },
+  "footer": {
+    "credit": "Un proyecto de <openSource>código abierto</openSource> de <brand>Pericodes</brand>"
   }
 }

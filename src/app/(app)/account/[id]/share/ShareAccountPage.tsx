@@ -37,7 +37,7 @@ export default function ShareAccountPage() {
   };
 
   return (
-    <div className="bg-surface text-on-surface min-h-screen flex flex-col pt-16">
+    <div className="bg-surface text-on-surface min-h-full flex-1 flex flex-col pt-16">
       <Header title={t("share.title")} accountName={account.name} showBack />
       
       <main className="flex-grow flex flex-col items-center justify-center p-4 max-w-lg mx-auto w-full">

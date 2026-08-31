@@ -288,7 +288,7 @@ export default function AddExpensePage({
   };
 
   return (
-    <div className="bg-surface text-on-surface min-h-screen flex flex-col antialiased pt-16">
+    <div className="bg-surface text-on-surface min-h-full flex-1 flex flex-col antialiased pt-16">
       {saving && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-surface/80">
           {t("expense.saving")}

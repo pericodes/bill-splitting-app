@@ -1,34 +1,42 @@
-import type { Metadata, Viewport } from 'next';
-import './globals.css';
-import { AlertProvider } from '../components/common/AlertProvider';
-import I18nProvider from '@/i18n/I18nProvider';
+import type { Metadata, Viewport } from "next";
+import { Inter } from "next/font/google";
+import "./globals.css";
+import { SITE_NAME, SITE_URL } from "@/landing/site";
+
+const inter = Inter({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-inter",
+  weight: ["400", "600", "700"],
+  preload: true,
+});
 
 export const metadata: Metadata = {
-  title: 'Bill Splitting App',
-  description: 'Gestión financiera simple, rápida y confiable.',
-  manifest: '/manifest.json',
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: SITE_NAME,
+    template: `%s · ${SITE_NAME}`,
+  },
+  description: "Gestión financiera simple, rápida y confiable. Divide gastos compartidos.",
+  applicationName: SITE_NAME,
+  manifest: "/manifest.json",
+  icons: {
+    icon: [{ url: "/bill-splitting-app-logo-no-border.svg", type: "image/svg+xml" }],
+    apple: [{ url: "/icon-512.png", sizes: "512x512", type: "image/png" }],
+  },
 };
 
 export const viewport: Viewport = {
-  width: 'device-width',
+  width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  themeColor: '#026ffb',
+  themeColor: "#026ffb",
 };
 
-export default function RootLayout({children}: {children: React.ReactNode}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es">
-      <head>
-        <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
-      </head>
-      <body className="bg-[#f8f9fa] text-[#191c1d] min-h-screen antialiased" suppressHydrationWarning>
-        <I18nProvider>
-          <AlertProvider>
-            {children}
-          </AlertProvider>
-        </I18nProvider>
+    <html lang="es" className={inter.variable}>
+      <body className={`${inter.className} bg-[#f8f9fa] text-[#191c1d] min-h-screen antialiased`} suppressHydrationWarning>
+        {children}
       </body>
     </html>
   );

@@ -46,7 +46,7 @@ export default function BalancesPage() {
   }
 
   return (
-    <div className="bg-background text-on-background antialiased min-h-screen flex flex-col font-body-lg pt-16">
+    <div className="bg-background text-on-background antialiased min-h-full flex-1 flex flex-col font-body-lg pt-16">
       <Header title={t("balances.title")} accountName={account.name} showBack />
       
       <main className="flex-1 px-4 py-6 pb-32 md:pb-6 max-w-3xl mx-auto w-full">

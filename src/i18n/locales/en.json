@@ -36,6 +36,7 @@
     "enter": "Sign in",
     "enter_as_guest": "Continue as guest",
     "create_account": "Create account",
+    "back_home": "Back to home",
     "ghost_hint": "A local profile without a password will be created for this browser.",
     "name_required": "Name is required",
     "guest_create_error": "Could not create guest user",
@@ -189,5 +190,8 @@
   },
   "not_found": {
     "message": "Page not found"
+  },
+  "footer": {
+    "credit": "An <openSource>open source</openSource> project of <brand>Pericodes</brand>"
   }
 }

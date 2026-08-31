@@ -116,12 +116,12 @@ export function AccountDataProvider({
       return;
     }
     if (hasHydrated) {
-      router.push("/");
+      router.push("/login");
     }
   }, [hasHydrated, userId, accountId, refetch, router]);
 
   if (!userId || (loading && !data) || (data && loadedIdRef.current !== accountId && loading)) {
-    return <div className="min-h-screen flex items-center justify-center">{t("account.loading")}</div>;
+    return <div className="flex-1 flex items-center justify-center">{t("account.loading")}</div>;
   }
 
   if (!data) return null;

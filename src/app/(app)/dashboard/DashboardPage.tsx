@@ -54,7 +54,7 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!hasHydrated) return;
     if (!currentUser) {
-      router.push('/');
+      router.push('/login');
     }
   }, [hasHydrated, currentUser, router]);
 
@@ -90,15 +90,15 @@ export default function DashboardPage() {
   };
 
   if (!currentUser) {
-    return <div className="min-h-screen flex items-center justify-center">{t("dashboard.loading")}</div>;
+    return <div className="flex-1 flex items-center justify-center">{t("dashboard.loading")}</div>;
   }
 
   if (loading && !hasCache) {
-    return <div className="min-h-screen flex items-center justify-center">{t("dashboard.loading")}</div>;
+    return <div className="flex-1 flex items-center justify-center">{t("dashboard.loading")}</div>;
   }
 
   return (
-    <div className="bg-background text-on-surface min-h-screen flex flex-col pb-24 md:pb-0 relative">
+    <div className="bg-background text-on-surface min-h-full flex-1 flex flex-col relative">
       {/* Top App Bar (Web) */}
       <header className="hidden md:flex justify-between items-center w-full px-8 h-16 bg-surface-container-lowest border-b border-outline-variant sticky top-0 z-30">
         <h1 className="text-xl font-bold text-on-surface">{t("common.app_name")}</h1>

@@ -117,7 +117,7 @@ export default function ParticipantsPage() {
   };
 
   return (
-    <div className="bg-background text-on-background min-h-screen font-body-lg flex flex-col pt-16">
+    <div className="bg-background text-on-background min-h-full flex-1 font-body-lg flex flex-col pt-16">
       <Header
         title={t("participants.title")}
         accountName={account.name}

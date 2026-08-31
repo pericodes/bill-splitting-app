@@ -29,7 +29,7 @@ export default function ProfilePage() {
   useEffect(() => {
     if (!hasHydrated) return;
     if (!currentUser) {
-      router.push("/");
+      router.push("/login");
       return;
     }
     setName(currentUser.display_name || "");
@@ -88,14 +88,14 @@ export default function ProfilePage() {
   };
 
   if (!hasHydrated || !currentUser) {
-    return <div className="min-h-screen flex items-center justify-center">{t("profile.loading")}</div>;
+    return <div className="flex-1 flex items-center justify-center">{t("profile.loading")}</div>;
   }
 
   const fieldClass =
     "w-full pl-10 pr-3 py-3 bg-surface-container-low border border-surface-variant rounded-lg focus:ring-1 focus:ring-primary focus:border-primary text-base text-on-surface placeholder:text-outline-variant transition-all outline-none";
 
   return (
-    <div className="bg-background text-on-surface min-h-screen flex flex-col pb-24 md:pb-0 relative">
+    <div className="bg-background text-on-surface min-h-full flex-1 flex flex-col relative">
       <header className="hidden md:flex justify-between items-center w-full px-8 h-16 bg-surface-container-lowest border-b border-outline-variant sticky top-0 z-30">
         <h1 className="text-xl font-bold text-on-surface">{t("common.app_name")}</h1>
         <nav className="flex gap-6 items-center">

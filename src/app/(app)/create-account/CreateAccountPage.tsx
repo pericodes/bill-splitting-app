@@ -18,7 +18,7 @@ export default function CreateAccountPage() {
 
   useEffect(() => {
     if (!currentUser) {
-      router.push('/');
+      router.push('/login');
     }
   }, [currentUser, router]);
 
@@ -53,7 +53,7 @@ export default function CreateAccountPage() {
   };
 
   return (
-    <div className="bg-background text-on-background min-h-screen pb-24 md:pb-8 flex flex-col font-body-lg pt-16">
+    <div className="bg-background text-on-background min-h-full flex-1 pb-24 md:pb-8 flex flex-col font-body-lg pt-16">
       <Header title={t("create_account.title")} showBack />
       
       <main className="flex-grow flex flex-col items-center justify-start px-4 py-6 overflow-y-auto">

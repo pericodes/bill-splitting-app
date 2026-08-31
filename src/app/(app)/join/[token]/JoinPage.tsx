@@ -39,7 +39,7 @@ export default function JoinPage({ token }: { token: string }) {
   }, [token, router]);
 
   if (loading) {
-    return <div className="h-screen flex items-center justify-center">{t("join.loading")}</div>;
+    return <div className="flex-1 flex items-center justify-center">{t("join.loading")}</div>;
   }
 
   if (!account) return null;
@@ -87,7 +87,7 @@ export default function JoinPage({ token }: { token: string }) {
   };
 
   return (
-    <div className="bg-surface text-on-surface h-screen flex items-center justify-center relative overflow-hidden">
+    <div className="bg-surface text-on-surface flex-1 flex items-center justify-center relative overflow-hidden">
       <div className="absolute inset-0 z-0 opacity-20 pointer-events-none">
         <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-primary-container rounded-full blur-[100px]"></div>
         <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] bg-secondary-container rounded-full blur-[120px]"></div>

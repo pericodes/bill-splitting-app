@@ -46,7 +46,7 @@ export default function AccountPage() {
   };
   
   return (
-    <div className="bg-background text-on-background min-h-screen relative font-body-lg pt-16">
+    <div className="bg-background text-on-background min-h-full flex-1 relative font-body-lg pt-16">
       <Header title={account.name} showBack onBack={() => router.replace('/dashboard')} />
       
       <main className="pt-4 pb-8 px-4 max-w-3xl mx-auto flex flex-col gap-6">

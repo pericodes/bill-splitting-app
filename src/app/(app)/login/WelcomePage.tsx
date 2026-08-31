@@ -72,7 +72,10 @@ export default function WelcomePage() {
     "w-full pl-10 pr-3 py-3 bg-surface-container-low border border-surface-variant rounded-lg focus:ring-1 focus:ring-primary focus:border-primary text-base text-on-surface placeholder:text-outline-variant transition-all outline-none";
 
   return (
-    <main className="min-h-screen flex items-center justify-center p-4">
+    <main className="flex-1 flex flex-col items-center justify-center p-4 gap-4">
+      <a href="/" className="text-sm font-medium text-outline hover:text-primary">
+        {t("welcome.back_home")}
+      </a>
       <div className="w-full max-w-md bg-surface-container-lowest rounded-2xl shadow-lg border border-surface-variant overflow-hidden">
         <div className="pt-8 pb-6 px-6 text-center flex flex-col items-center justify-center">
           <div className="w-16 h-16 bg-primary-container text-on-primary-container rounded-full flex items-center justify-center mb-2">
