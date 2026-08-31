@@ -73,7 +73,7 @@ CREATE INDEX idx_transactions_account_date ON transactions (account_id, occurred
 CREATE TABLE transaction_entries (
   id             uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   transaction_id uuid NOT NULL REFERENCES transactions(id) ON DELETE CASCADE,
-  account_id     uuid NOT NULL REFERENCES accounts(id), -- Denormalizado para performance
+  account_id     uuid NOT NULL REFERENCES accounts(id) ON DELETE CASCADE, -- Denormalizado para performance
   user_id        uuid NOT NULL REFERENCES users(id),
   paid_amount    numeric(12,2) NOT NULL DEFAULT 0 CHECK (paid_amount >= 0),
   owed_amount    numeric(12,2) NOT NULL DEFAULT 0 CHECK (owed_amount >= 0),

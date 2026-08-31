@@ -26,20 +26,6 @@ export default function BottomNav() {
       </Link>
       
       <Link 
-        href="/activities"
-        className={`flex flex-col items-center justify-center transition-all ${
-          pathname === '/activities'
-            ? "bg-primary-container text-on-primary-container rounded-full px-6 py-1 scale-90"
-            : "text-on-surface-variant hover:opacity-80"
-        }`}
-      >
-        <span className="material-symbols-outlined mb-1" style={{ fontVariationSettings: pathname === '/activities' ? "'FILL' 1" : "'FILL' 0" }}>
-          history
-        </span>
-        <span className="text-[12px] font-semibold tracking-wider">{t("nav.activities")}</span>
-      </Link>
-      
-      <Link 
         href="/profile"
         className={`flex flex-col items-center justify-center transition-all ${
           pathname === '/profile'

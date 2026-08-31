@@ -20,7 +20,6 @@
   },
   "nav": {
     "accounts": "Cuentas",
-    "activities": "Actividades",
     "profile": "Perfil"
   },
   "welcome": {
@@ -31,6 +30,8 @@
     "your_name": "Tu nombre",
     "email": "Email",
     "password": "Contraseña",
+    "show_password": "Mostrar contraseña",
+    "hide_password": "Ocultar contraseña",
     "name_placeholder": "Ej. Pablo",
     "email_placeholder": "tu@email.com",
     "enter": "Entrar",

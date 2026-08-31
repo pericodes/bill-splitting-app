@@ -193,13 +193,6 @@ export default function DashboardPage() {
       </main>
 
       <BottomNav />
-
-      <Link 
-        href="/create-account"
-        className="md:hidden fixed bottom-20 right-4 bg-secondary text-on-secondary w-14 h-14 rounded-full shadow-lg shadow-secondary/30 flex items-center justify-center hover:bg-secondary/90 transition-colors z-40"
-      >
-        <span className="material-symbols-outlined text-[28px]">add</span>
-      </Link>
     </div>
   );
 }

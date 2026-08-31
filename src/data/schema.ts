@@ -63,7 +63,7 @@ export const transactions = pgTable('transactions', {
 export const transactionEntries = pgTable('transaction_entries', {
   id: uuid('id').defaultRandom().primaryKey(),
   transactionId: uuid('transaction_id').references(() => transactions.id, { onDelete: 'cascade' }).notNull(),
-  accountId: uuid('account_id').references(() => accounts.id).notNull(),
+  accountId: uuid('account_id').references(() => accounts.id, { onDelete: 'cascade' }).notNull(),
   userId: uuid('user_id').references(() => users.id).notNull(),
   paidAmount: numeric('paid_amount', { precision: 12, scale: 2 }).default('0').notNull(),
   owedAmount: numeric('owed_amount', { precision: 12, scale: 2 }).default('0').notNull(),

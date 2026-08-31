@@ -20,7 +20,6 @@
   },
   "nav": {
     "accounts": "Accounts",
-    "activities": "Activity",
     "profile": "Profile"
   },
   "welcome": {
@@ -31,6 +30,8 @@
     "your_name": "Your name",
     "email": "Email",
     "password": "Password",
+    "show_password": "Show password",
+    "hide_password": "Hide password",
     "name_placeholder": "e.g. Alex",
     "email_placeholder": "you@email.com",
     "enter": "Sign in",

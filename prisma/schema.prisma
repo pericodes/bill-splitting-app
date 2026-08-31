@@ -144,7 +144,7 @@ model TransactionEntry {
   createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
 
   transaction Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
-  account     Account     @relation(fields: [accountId], references: [id])
+  account     Account     @relation(fields: [accountId], references: [id], onDelete: Cascade)
   user        User        @relation(fields: [userId], references: [id])
 
   @@unique([transactionId, userId])

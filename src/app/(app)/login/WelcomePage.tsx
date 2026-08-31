@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import { useStore, useHasHydrated } from "@/data/store";
 import { completeAuthAction, createGhostUser } from "@/actions/app";
 import { neonSignIn, neonSignUp } from "@/lib/clientAuth";
+import { cn } from "@/lib/utils";
 
 export default function WelcomePage({ nextPath = null }: { nextPath?: string | null }) {
   const [tab, setTab] = useState<"ghost" | "login" | "register">(nextPath ? "login" : "ghost");
@@ -14,6 +15,7 @@ export default function WelcomePage({ nextPath = null }: { nextPath?: string | n
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   const router = useRouter();
   const { t } = useTranslation();
@@ -194,14 +196,25 @@ export default function WelcomePage({ nextPath = null }: { nextPath?: string | n
                       lock
                     </span>
                     <input
-                      type="password"
+                      type={showPassword ? "text" : "password"}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="••••••••"
                       required
                       minLength={8}
-                      className={fieldClass}
+                      className={cn(fieldClass, "pr-12")}
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((visible) => !visible)}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-md text-outline hover:text-on-surface focus:outline-none focus:ring-1 focus:ring-primary"
+                      aria-label={showPassword ? t("welcome.hide_password") : t("welcome.show_password")}
+                      aria-pressed={showPassword}
+                    >
+                      <span className="material-symbols-outlined text-xl">
+                        {showPassword ? "visibility_off" : "visibility"}
+                      </span>
+                    </button>
                   </div>
                 </div>
               </>
