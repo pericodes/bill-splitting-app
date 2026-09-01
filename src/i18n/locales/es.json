@@ -84,7 +84,8 @@
     "delete_desc": "¿Estás seguro de que deseas eliminar esta cuenta? Esta acción no se puede deshacer.",
     "delete_error": "Error al eliminar la cuenta",
     "load_error": "No se pudieron cargar las cuentas.",
-    "rate_limit": "Neon Auth ha limitado las peticiones. Espera un momento y vuelve a intentar."
+    "rate_limit": "Neon Auth ha limitado las peticiones. Espera un momento y vuelve a intentar.",
+    "refreshing": "Actualizando..."
   },
   "create_account": {
     "title": "Crear cuenta",
@@ -116,7 +117,8 @@
     "delete_expense_desc": "¿Quieres eliminar «{{name}}»? Esta acción no se puede deshacer.",
     "this_expense": "este gasto",
     "delete_expense_error": "No se pudo eliminar el gasto.",
-    "delete_aria": "Eliminar {{name}}"
+    "delete_aria": "Eliminar {{name}}",
+    "refreshing": "Actualizando..."
   },
   "expense": {
     "add": "Añadir gasto",

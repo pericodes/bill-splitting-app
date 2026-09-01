@@ -71,6 +71,7 @@ model Account {
   inviteToken String    @unique @default(dbgenerated("gen_random_uuid()")) @map("invite_token") @db.Uuid
   createdBy   String    @map("created_by") @db.Uuid
   createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime  @default(now()) @map("updated_at") @db.Timestamptz
   archivedAt  DateTime? @map("archived_at") @db.Timestamptz
 
   creator      User               @relation("AccountCreatedBy", fields: [createdBy], references: [id])

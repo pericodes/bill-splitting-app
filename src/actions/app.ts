@@ -165,12 +165,62 @@ export async function completeAuthAction(params: {
   }
 }
 
+async function touchAccount(accountId: string) {
+  const { error } = await dataApi
+    .from("accounts")
+    .update({ updated_at: new Date().toISOString() })
+    .eq("id", accountId);
+  throwIfApiError(error, "No se pudo actualizar la cuenta");
+}
+
+async function touchAccountsForUser(userId: string) {
+  const { data: members, error } = await dataApi
+    .from("account_members")
+    .select("account_id")
+    .eq("user_id", userId);
+  throwIfApiError(error, "No se pudieron leer las cuentas del usuario");
+  const ids = [...new Set((members || []).map((m: { account_id: string }) => m.account_id))];
+  await Promise.all(ids.map((id) => touchAccount(id)));
+}
+
+type DashboardAccountRow = {
+  id: string;
+  name: string;
+  currency: string;
+  icon_key?: string;
+  iconKey?: string;
+  updated_at?: string;
+  updatedAt?: string;
+};
+
+function mapDashboardAccount(a: DashboardAccountRow) {
+  return {
+    id: a.id,
+    name: a.name,
+    currency: a.currency,
+    icon_key: a.icon_key || a.iconKey,
+    updated_at: a.updated_at || a.updatedAt || null,
+  };
+}
+
+function mapBalanceMap(
+  bals: { account_id?: string; accountId?: string; balance: string | number }[] | null
+) {
+  const balanceMap: Record<string, number> = {};
+  (bals || []).forEach((b) => {
+    const key = b.account_id || b.accountId;
+    if (key) balanceMap[key] = parseFloat(String(b.balance));
+  });
+  return balanceMap;
+}
+
 async function applyBalanceDeltas(
   accountId: string,
   deltas: { userId: string; delta: number }[],
   existingBals: { user_id?: string; userId?: string; balance: string | number }[]
 ) {
   const balByUser = new Map(existingBals.map((b) => [userIdOf(b), b]));
+  const now = new Date().toISOString();
 
   await Promise.all(
     deltas.map(async ({ userId, delta }) => {
@@ -179,7 +229,7 @@ async function applyBalanceDeltas(
         const newBalance = parseFloat(String(currBal.balance)) + delta;
         const { error } = await dataApi
           .from("account_balances")
-          .update({ balance: newBalance.toString() })
+          .update({ balance: newBalance.toString(), updated_at: now })
           .eq("account_id", accountId)
           .eq("user_id", userId);
         throwIfApiError(error, "No se pudo actualizar el saldo");
@@ -188,11 +238,14 @@ async function applyBalanceDeltas(
           account_id: accountId,
           user_id: userId,
           balance: delta.toString(),
+          updated_at: now,
         });
         throwIfApiError(error, "No se pudo crear el saldo");
       }
     })
   );
+
+  await touchAccount(accountId);
 }
 
 export async function createGhostUser(displayName: string) {
@@ -240,34 +293,64 @@ export async function getDashboardData(userId: string) {
     }
 
     const [accsRes, balsRes] = await Promise.all([
-      dataApi.from("accounts").select("id, name, icon_key, currency").in("id", accountIds),
+      dataApi.from("accounts").select("id, name, icon_key, currency, updated_at").in("id", accountIds),
       dataApi.from("account_balances").select("account_id, balance").eq("user_id", userId).in("account_id", accountIds),
     ]);
     throwIfApiError(accsRes.error, "No se pudieron leer las cuentas");
     throwIfApiError(balsRes.error, "No se pudieron leer los saldos");
-    const accs = accsRes.data;
-    const bals = balsRes.data;
 
-    const accounts = (accs || []).map((a: {
-      id: string;
-      name: string;
-      currency: string;
-      icon_key?: string;
-      iconKey?: string;
-    }) => ({
-      id: a.id,
-      name: a.name,
-      currency: a.currency,
-      icon_key: a.icon_key || a.iconKey,
-    }));
+    return {
+      success: true,
+      accounts: (accsRes.data || []).map(mapDashboardAccount),
+      balances: mapBalanceMap(balsRes.data),
+    };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
 
-    const balanceMap: Record<string, number> = {};
-    (bals || []).forEach((b: { account_id: string; accountId?: string; balance: string | number }) => {
-      const key = b.account_id || b.accountId;
-      if (key) balanceMap[key] = parseFloat(String(b.balance));
-    });
+export async function getAccountsMeta(accountIds: string[]) {
+  try {
+    if (accountIds.length === 0) {
+      return { success: true, accounts: [] as ReturnType<typeof mapDashboardAccount>[] };
+    }
+    const { data, error } = await dataApi
+      .from("accounts")
+      .select("id, name, icon_key, currency, updated_at")
+      .in("id", accountIds);
+    throwIfApiError(error, "No se pudieron leer las cuentas");
+    return { success: true, accounts: (data || []).map(mapDashboardAccount) };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
 
-    return { success: true, accounts, balances: balanceMap };
+export async function getDashboardBalances(userId: string, accountIds: string[]) {
+  try {
+    if (accountIds.length === 0) {
+      return { success: true, balances: {} as Record<string, number> };
+    }
+    const { data, error } = await dataApi
+      .from("account_balances")
+      .select("account_id, balance")
+      .eq("user_id", userId)
+      .in("account_id", accountIds);
+    throwIfApiError(error, "No se pudieron leer los saldos");
+    return { success: true, balances: mapBalanceMap(data) };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
+
+export async function getAccountMeta(accountId: string) {
+  try {
+    const { data, error } = await dataApi
+      .from("accounts")
+      .select("id, name, icon_key, currency, updated_at")
+      .eq("id", accountId)
+      .single();
+    if (error || !data) return { success: false, error: "Not found" };
+    return { success: true, account: mapDashboardAccount(data) };
   } catch (err: any) {
     return { success: false, error: err.message };
   }
@@ -455,6 +538,7 @@ export async function joinAccountAction(token: string, userId: string, sessionSe
         balance: "0",
       });
       throwIfApiError(balanceError, "No se pudo crear el saldo");
+      await touchAccount(account.id);
     }
 
     return { success: true, accountId: account.id };
@@ -574,6 +658,7 @@ export async function addParticipantAction(accountId: string, displayName: strin
     });
     throwIfApiError(balanceError, "No se pudo crear el saldo");
 
+    await touchAccount(accountId);
     return { success: true, user: newUser };
   } catch (err: any) {
     return { success: false, error: err.message };
@@ -606,6 +691,7 @@ export async function updateParticipantNameAction(accountId: string, userId: str
       .eq("id", userId);
     throwIfApiError(updateError, "No se pudo actualizar el nombre");
 
+    await touchAccount(accountId);
     return { success: true };
   } catch (err: any) {
     return { success: false, error: err.message };
@@ -628,6 +714,7 @@ export async function updateUserNameAction(userId: string, displayName: string) 
       .eq("id", userId);
     throwIfApiError(updateError, "No se pudo actualizar el nombre");
 
+    await touchAccountsForUser(userId);
     return { success: true };
   } catch (err: any) {
     return { success: false, error: err.message };
@@ -679,6 +766,8 @@ export async function removeParticipantAction(accountId: string, userId: string)
       .eq("user_id", userId);
     throwIfApiError(deleteMemberError, "No se pudo eliminar el miembro");
 
+    await touchAccount(accountId);
+
     const { data: user, error: userError } = await dataApi
       .from("users")
       .select("*")
@@ -709,17 +798,25 @@ export async function addTransactionAction(
   accountId: string,
   description: string,
   amount: number,
-  splits: { userId: string; paid: number; owed: number }[]
+  splits: { userId: string; paid: number; owed: number }[],
+  createdBy?: string
 ) {
   try {
+    const { data: account, error: accountError } = await dataApi
+      .from("accounts")
+      .select("currency")
+      .eq("id", accountId)
+      .single();
+    throwIfApiError(accountError, "No se pudo leer la cuenta");
+
     const { data: newTx, error: txError } = await dataApi
       .from("transactions")
       .insert({
         account_id: accountId,
         description,
         total_amount: amount.toString(),
-        currency: "EUR",
-        created_by: splits[0].userId,
+        currency: account?.currency || "EUR",
+        created_by: createdBy || splits[0]?.userId,
         type: "expense",
       })
       .select()
@@ -732,17 +829,22 @@ export async function addTransactionAction(
       .eq("account_id", accountId);
     throwIfApiError(currBalError, "No se pudo leer el saldo");
 
+    let entries: unknown[] = [];
     if (splits.length > 0) {
-      const { error: entriesError } = await dataApi.from("transaction_entries").insert(
-        splits.map((split) => ({
-          transaction_id: newTx.id,
-          account_id: accountId,
-          user_id: split.userId,
-          paid_amount: split.paid.toString(),
-          owed_amount: split.owed.toString(),
-        }))
-      );
+      const { data: inserted, error: entriesError } = await dataApi
+        .from("transaction_entries")
+        .insert(
+          splits.map((split) => ({
+            transaction_id: newTx.id,
+            account_id: accountId,
+            user_id: split.userId,
+            paid_amount: split.paid.toString(),
+            owed_amount: split.owed.toString(),
+          }))
+        )
+        .select();
       throwIfApiError(entriesError, "No se pudo crear el apunte");
+      entries = inserted || [];
     }
 
     await applyBalanceDeltas(
@@ -751,7 +853,7 @@ export async function addTransactionAction(
       currBals || []
     );
 
-    return { success: true };
+    return { success: true, transaction: newTx, entries };
   } catch (err: any) {
     return { success: false, error: err.message };
   }

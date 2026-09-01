@@ -7,6 +7,7 @@ import { format } from 'date-fns';
 import { useTranslation } from 'react-i18next';
 import { useStore } from '@/data/store';
 import Header from '@/components/layout/Header';
+import PullToRefresh from '@/components/common/PullToRefresh';
 import { useAlert } from '@/components/common/AlertProvider';
 import { deleteTransactionAction } from '@/actions/app';
 import { useAccountData } from './AccountDataProvider';
@@ -20,6 +21,10 @@ export default function AccountPage() {
   const { showAlert, showConfirm } = useAlert();
   const { account, users, balances: accountBalances, transactions: accountTxs, entries } = data;
   const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const handleRefresh = React.useCallback(async () => {
+    await refetch({ force: true });
+  }, [refetch]);
 
   const myBalance = parseFloat(accountBalances.find(b => b.userId === currentUser?.id || b.user_id === currentUser?.id)?.balance || "0");
 
@@ -46,7 +51,7 @@ export default function AccountPage() {
   };
   
   return (
-    <div className="bg-background text-on-background min-h-full flex-1 relative font-body-lg pt-16">
+    <PullToRefresh onRefresh={handleRefresh} className="bg-background text-on-background min-h-full flex-1 relative font-body-lg pt-16">
       <Header title={account.name} showBack onBack={() => router.replace('/dashboard')} />
       
       <main className="pt-4 pb-8 px-4 max-w-3xl mx-auto flex flex-col gap-6">
@@ -151,6 +156,6 @@ export default function AccountPage() {
           )}
         </section>
       </main>
-    </div>
+    </PullToRefresh>
   );
 }

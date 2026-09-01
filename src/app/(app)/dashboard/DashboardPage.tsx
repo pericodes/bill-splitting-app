@@ -4,8 +4,10 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import BottomNav from '@/components/layout/BottomNav';
+import PullToRefresh from '@/components/common/PullToRefresh';
 import { useAlert } from '@/components/common/AlertProvider';
-import { getDashboardData, deleteAccountAction } from '@/actions/app';
+import { deleteAccountAction } from '@/actions/app';
+import { syncDashboard } from '@/data/dashboardSync';
 import { useHasHydrated, useStore } from '@/data/store';
 import { isRateLimitError } from '@/lib/errors';
 import { neonSignOut } from '@/lib/clientAuth';
@@ -21,7 +23,6 @@ export default function DashboardPage() {
     dashboardUserId,
     dashboardAccounts: accounts,
     dashboardBalances: balances,
-    setDashboardData,
     removeDashboardAccount,
   } = useStore();
   const { showConfirm } = useAlert();
@@ -32,16 +33,14 @@ export default function DashboardPage() {
   const userId = currentUser?.id;
   const hasCache = !!userId && dashboardUserId === userId;
 
-  const fetchAccounts = React.useCallback(async () => {
+  const runSync = React.useCallback(async (opts?: { forceMembership?: boolean; forceAll?: boolean }) => {
     if (!userId) return;
     setFetchError(null);
     if (useStore.getState().dashboardUserId !== userId) setLoading(true);
 
     try {
-      const res = await getDashboardData(userId);
-      if (res.success) {
-        setDashboardData(userId, res.accounts || [], res.balances || {});
-      } else {
+      const res = await syncDashboard(userId, opts);
+      if (!res.success) {
         setFetchError(res.error || t("dashboard.load_error"));
       }
     } catch (err: any) {
@@ -49,7 +48,7 @@ export default function DashboardPage() {
     } finally {
       setLoading(false);
     }
-  }, [userId, setDashboardData, t]);
+  }, [userId, t]);
 
   useEffect(() => {
     if (!hasHydrated) return;
@@ -59,8 +58,13 @@ export default function DashboardPage() {
   }, [hasHydrated, currentUser, router]);
 
   useEffect(() => {
-    if (userId) fetchAccounts();
-  }, [userId, fetchAccounts]);
+    if (!hasHydrated || !userId) return;
+    void runSync();
+  }, [hasHydrated, userId, runSync]);
+
+  const handleRefresh = React.useCallback(async () => {
+    await runSync({ forceMembership: true, forceAll: true });
+  }, [runSync]);
 
   const handleDelete = (id: string, e: React.MouseEvent) => {
     e.preventDefault();
@@ -77,7 +81,7 @@ export default function DashboardPage() {
           alert(t("dashboard.delete_error"));
         } else {
           removeDashboardAccount(id);
-          fetchAccounts();
+          void runSync({ forceMembership: true });
         }
       }
     });
@@ -89,7 +93,7 @@ export default function DashboardPage() {
     router.push('/');
   };
 
-  if (!currentUser) {
+  if (!hasHydrated || !currentUser) {
     return <div className="flex-1 flex items-center justify-center">{t("dashboard.loading")}</div>;
   }
 
@@ -98,8 +102,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="bg-background text-on-surface min-h-full flex-1 flex flex-col relative">
-      {/* Top App Bar (Web) */}
+    <PullToRefresh onRefresh={handleRefresh} className="bg-background text-on-surface min-h-full flex-1 flex flex-col relative">
       <header className="hidden md:flex justify-between items-center w-full px-8 h-16 bg-surface-container-lowest border-b border-outline-variant sticky top-0 z-30">
         <h1 className="text-xl font-bold text-on-surface">{t("common.app_name")}</h1>
         <nav className="flex gap-6 items-center">
@@ -130,7 +133,7 @@ export default function DashboardPage() {
             </p>
             <button
               type="button"
-              onClick={fetchAccounts}
+              onClick={() => void runSync({ forceMembership: true, forceAll: true })}
               className="shrink-0 px-4 py-2 rounded-lg font-semibold bg-primary text-on-primary hover:bg-primary/90 transition-colors"
             >
               {t("common.retry")}
@@ -150,7 +153,8 @@ export default function DashboardPage() {
           </Link>
 
           {accounts.map(account => {
-            const myBalance = balances[account.id] || 0;
+            const hasBalance = Object.prototype.hasOwnProperty.call(balances, account.id);
+            const myBalance = hasBalance ? balances[account.id] : 0;
             
             return (
               <Link 
@@ -178,9 +182,15 @@ export default function DashboardPage() {
                 
                 <div className="mt-auto border-t border-surface-variant pt-2 flex justify-between items-center relative z-10">
                   <span className="text-sm text-on-surface-variant">{t("dashboard.my_balance")}</span>
-                  <span className={`text-base font-semibold ${myBalance >= 0 ? (myBalance === 0 ? 'text-on-surface' : 'text-secondary') : 'text-error'}`}>
-                    {myBalance > 0 ? '+' : ''}{myBalance.toFixed(2)} {account.currency}
-                  </span>
+                  {hasBalance ? (
+                    <span className={`text-base font-semibold ${myBalance >= 0 ? (myBalance === 0 ? 'text-on-surface' : 'text-secondary') : 'text-error'}`}>
+                      {myBalance > 0 ? '+' : ''}{myBalance.toFixed(2)} {account.currency}
+                    </span>
+                  ) : (
+                    <span className="material-symbols-outlined text-[18px] animate-spin text-on-surface-variant" aria-label={t("common.loading")}>
+                      progress_activity
+                    </span>
+                  )}
                 </div>
                 
                 <div className="absolute -bottom-6 -right-6 text-surface-container-highest opacity-20 group-hover:opacity-30 transition-opacity pointer-events-none">
@@ -193,6 +203,6 @@ export default function DashboardPage() {
       </main>
 
       <BottomNav />
-    </div>
+    </PullToRefresh>
   );
 }

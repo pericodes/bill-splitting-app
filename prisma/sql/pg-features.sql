@@ -115,6 +115,49 @@ CREATE INDEX IF NOT EXISTS idx_transactions_account_date_active
   ON transactions (account_id, occurred_on DESC)
   WHERE deleted_at IS NULL;
 
+-- Reloj de actividad de la cuenta (caché / skip de refetch en el cliente).
+CREATE OR REPLACE FUNCTION touch_account_updated_at()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  acc_id uuid;
+BEGIN
+  IF TG_OP = 'DELETE' THEN
+    acc_id := OLD.account_id;
+  ELSE
+    acc_id := NEW.account_id;
+  END IF;
+
+  UPDATE accounts SET updated_at = now() WHERE id = acc_id;
+
+  IF TG_OP = 'DELETE' THEN
+    RETURN OLD;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_touch_account_on_transactions ON transactions;
+CREATE TRIGGER trg_touch_account_on_transactions
+  AFTER INSERT OR UPDATE OR DELETE ON transactions
+  FOR EACH ROW EXECUTE PROCEDURE touch_account_updated_at();
+
+DROP TRIGGER IF EXISTS trg_touch_account_on_entries ON transaction_entries;
+CREATE TRIGGER trg_touch_account_on_entries
+  AFTER INSERT OR UPDATE OR DELETE ON transaction_entries
+  FOR EACH ROW EXECUTE PROCEDURE touch_account_updated_at();
+
+DROP TRIGGER IF EXISTS trg_touch_account_on_members ON account_members;
+CREATE TRIGGER trg_touch_account_on_members
+  AFTER INSERT OR UPDATE OR DELETE ON account_members
+  FOR EACH ROW EXECUTE PROCEDURE touch_account_updated_at();
+
+DROP TRIGGER IF EXISTS trg_touch_account_on_balances ON account_balances;
+CREATE TRIGGER trg_touch_account_on_balances
+  AFTER INSERT OR UPDATE OR DELETE ON account_balances
+  FOR EACH ROW EXECUTE PROCEDURE touch_account_updated_at();
+
 -- Fusiona un usuario fantasma en uno registrado y borra el fantasma.
 -- Atómico: Data API no puede transaccionar varias tablas a la vez.
 CREATE OR REPLACE FUNCTION merge_ghost_into_user(p_ghost_id uuid, p_target_id uuid)

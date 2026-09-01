@@ -5,7 +5,9 @@ import { useRouter } from 'next/navigation';
 import { useStore } from '@/data/store';
 import Header from '@/components/layout/Header';
 import { useAlert } from '@/components/common/AlertProvider';
+import { v4 as uuidv4 } from 'uuid';
 import { addTransactionAction, updateTransactionAction } from '@/actions/app';
+import { applyOptimisticExpense, reconcileOptimisticExpense, rollbackOptimisticExpense } from '@/data/accountCache';
 import { formatMoney, getCurrencySymbol, isCurrencyPrefix } from '@/lib/currency';
 import { cn } from '@/lib/utils';
 import { useAccountData } from '../AccountDataProvider';
@@ -258,21 +260,51 @@ export default function AddExpensePage({
 
     if (saving) return;
 
+    const desc = description || t("expense.default_description");
+
+    if (txId) {
+      setSaving(true);
+      try {
+        const res = await updateTransactionAction(id, txId, desc, numAmount, splitArray);
+        if (res.success) {
+          await refetch({ force: true });
+          router.push(`/account/${id}`);
+        } else {
+          showAlert({ title: t("common.error"), description: res.error || t("expense.save_error") });
+        }
+      } catch (err: any) {
+        showAlert({ title: t("common.error"), description: err.message || t("expense.save_error") });
+      } finally {
+        setSaving(false);
+      }
+      return;
+    }
+
+    if (!currentUser?.id) return;
     setSaving(true);
+    const tempId = uuidv4();
+    applyOptimisticExpense({
+      accountId: id,
+      tempId,
+      description: desc,
+      amount: numAmount,
+      currency: account.currency || "EUR",
+      createdBy: currentUser.id,
+      splits: splitArray,
+    });
+    router.push(`/account/${id}`);
+
     try {
-      const res = txId
-        ? await updateTransactionAction(id, txId, description || t("expense.default_description"), numAmount, splitArray)
-        : await addTransactionAction(id, description || t("expense.default_description"), numAmount, splitArray);
+      const res = await addTransactionAction(id, desc, numAmount, splitArray, currentUser.id);
       if (res.success) {
-        await refetch();
-        router.push(`/account/${id}`);
+        reconcileOptimisticExpense(id, tempId, res.transaction, res.entries || []);
       } else {
+        rollbackOptimisticExpense(id, tempId, splitArray);
         showAlert({ title: t("common.error"), description: res.error || t("expense.save_error") });
       }
     } catch (err: any) {
+      rollbackOptimisticExpense(id, tempId, splitArray);
       showAlert({ title: t("common.error"), description: err.message || t("expense.save_error") });
-    } finally {
-      setSaving(false);
     }
   };
 
@@ -289,7 +321,7 @@ export default function AddExpensePage({
 
   return (
     <div className="bg-surface text-on-surface min-h-full flex-1 flex flex-col antialiased pt-16">
-      {saving && (
+      {saving && isEditing && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-surface/80">
           {t("expense.saving")}
         </div>

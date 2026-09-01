@@ -27,6 +27,7 @@ export const accounts = pgTable('accounts', {
   inviteToken: uuid('invite_token').defaultRandom().notNull().unique(),
   createdBy: uuid('created_by').references(() => users.id).notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
   archivedAt: timestamp('archived_at', { withTimezone: true }),
 }, (table) => [
   index('idx_accounts_invite_token').on(table.inviteToken)
