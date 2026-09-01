@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
 import { useStore, useHasHydrated } from "@/data/store";
@@ -217,6 +218,20 @@ export default function WelcomePage({ nextPath = null }: { nextPath?: string | n
                     </button>
                   </div>
                 </div>
+                {tab === "login" && (
+                  <div className="flex justify-end -mt-2">
+                    <Link
+                      href={
+                        email.trim()
+                          ? `/reset-password?email=${encodeURIComponent(email.trim())}`
+                          : "/reset-password"
+                      }
+                      className="text-sm font-semibold text-primary hover:underline"
+                    >
+                      {t("welcome.forgot_password")}
+                    </Link>
+                  </div>
+                )}
               </>
             )}
 

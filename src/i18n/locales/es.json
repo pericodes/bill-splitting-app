@@ -42,7 +42,20 @@
     "join_sign_in_hint": "Inicia sesión para unirte al grupo con tu cuenta.",
     "name_required": "El nombre es requerido",
     "guest_create_error": "Error al crear usuario invitado",
-    "unexpected_error": "Ha ocurrido un error inesperado"
+    "unexpected_error": "Ha ocurrido un error inesperado",
+    "forgot_password": "Recuperar contraseña",
+    "forgot_hint": "Te enviaremos un enlace a tu email para elegir una nueva contraseña.",
+    "forgot_send": "Enviar enlace",
+    "forgot_sent": "Si existe una cuenta con ese email, recibirás un enlace en unos minutos. Revisa también la carpeta de spam.",
+    "forgot_back": "Volver a entrar",
+    "reset_title": "Nueva contraseña",
+    "reset_hint": "Elige una contraseña de al menos 8 caracteres.",
+    "reset_confirm": "Confirmar contraseña",
+    "reset_mismatch": "Las contraseñas no coinciden",
+    "reset_submit": "Guardar contraseña",
+    "reset_success": "Contraseña actualizada. Ya puedes entrar.",
+    "reset_invalid": "El enlace no es válido o ha caducado. Solicita uno nuevo.",
+    "reset_error": "No se pudo restablecer la contraseña"
   },
   "profile": {
     "title": "Perfil",

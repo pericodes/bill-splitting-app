@@ -71,3 +71,45 @@ export async function neonSignOut(): Promise<void> {
     // La sesión local de la app se limpia igual.
   }
 }
+
+type PasswordResetClient = typeof neonClient.auth & {
+  requestPasswordReset?: (opts: { email: string; redirectTo: string }) => Promise<unknown>;
+  forgetPassword?: (opts: { email: string; redirectTo: string }) => Promise<unknown>;
+  resetPassword?: (opts: { newPassword: string; token: string }) => Promise<unknown>;
+};
+
+function resetRedirectUrl(): string {
+  if (typeof window === "undefined") return "/reset-password";
+  return `${window.location.origin}/reset-password`;
+}
+
+export async function neonRequestPasswordReset(email: string): Promise<void> {
+  const auth = neonClient.auth as PasswordResetClient;
+  const payload = { email, redirectTo: resetRedirectUrl() };
+  const result =
+    typeof auth.requestPasswordReset === "function"
+      ? await auth.requestPasswordReset(payload)
+      : typeof auth.forgetPassword === "function"
+        ? await auth.forgetPassword(payload)
+        : null;
+  if (result == null && typeof auth.requestPasswordReset !== "function" && typeof auth.forgetPassword !== "function") {
+    throw new Error("La recuperación de contraseña no está disponible");
+  }
+  const message = errorMessage(result, "No se pudo enviar el enlace");
+  if (message) throw new Error(message);
+}
+
+export async function neonResetPassword(newPassword: string, token: string): Promise<string | null> {
+  const auth = neonClient.auth as PasswordResetClient;
+  if (typeof auth.resetPassword !== "function") {
+    throw new Error("La recuperación de contraseña no está disponible");
+  }
+  const result = await auth.resetPassword({ newPassword, token });
+  const message = errorMessage(result, "No se pudo restablecer la contraseña");
+  if (message) throw new Error(message);
+  try {
+    return await sessionJwt();
+  } catch {
+    return null;
+  }
+}

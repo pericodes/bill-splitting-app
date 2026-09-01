@@ -256,6 +256,20 @@ export default function ProfilePage() {
                   />
                 </div>
               </div>
+              {authTab === "login" && (
+                <div className="flex justify-end -mt-2">
+                  <Link
+                    href={
+                      email.trim()
+                        ? `/reset-password?email=${encodeURIComponent(email.trim())}`
+                        : "/reset-password"
+                    }
+                    className="text-sm font-semibold text-primary hover:underline"
+                  >
+                    {t("welcome.forgot_password")}
+                  </Link>
+                </div>
+              )}
               {authError && (
                 <div className="bg-error-container text-on-error-container p-3 rounded-lg text-sm flex gap-2 items-start">
                   <span className="material-symbols-outlined text-lg mt-0.5">error</span>

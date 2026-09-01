@@ -275,6 +275,14 @@ export async function getDashboardData(userId: string) {
 
 export async function deleteAccountAction(accountId: string) {
   try {
+    // account_id is denormalized and historically ON DELETE RESTRICT, so
+    // entries must go before the account. transactions/members/balances cascade.
+    const { error: entriesError } = await dataApi
+      .from("transaction_entries")
+      .delete()
+      .eq("account_id", accountId);
+    throwIfApiError(entriesError, "No se pudieron eliminar los apuntes");
+
     const { error } = await dataApi.from("accounts").delete().eq("id", accountId);
     throwIfApiError(error, "No se pudo eliminar la cuenta");
     return { success: true };
