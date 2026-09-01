@@ -52,7 +52,20 @@ export default function AccountPage() {
   
   return (
     <PullToRefresh onRefresh={handleRefresh} className="bg-background text-on-background min-h-full flex-1 relative font-body-lg pt-16">
-      <Header title={account.name} showBack onBack={() => router.replace('/dashboard')} />
+      <Header
+        title={account.name}
+        showBack
+        onBack={() => router.replace('/dashboard')}
+        rightAction={
+          <Link
+            href={`/account/${id}/edit`}
+            aria-label={t("edit_account.edit_aria")}
+            className="text-primary hover:bg-surface-container-high p-2 rounded-full transition-colors active:scale-95 -mr-2"
+          >
+            <span className="material-symbols-outlined">edit</span>
+          </Link>
+        }
+      />
       
       <main className="pt-4 pb-8 px-4 max-w-3xl mx-auto flex flex-col gap-6">
         <section className="bg-surface-container-lowest rounded-2xl border border-outline-variant p-6 flex flex-col items-center gap-4 relative overflow-hidden shadow-sm">

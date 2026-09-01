@@ -53,6 +53,42 @@ export function accountToDashboardPatch(data: AccountData, userId?: string | nul
   };
 }
 
+export function patchCachedAccountDetails(
+  accountId: string,
+  patch: { name: string; icon: string; currency: string; updated_at?: string | null }
+) {
+  const state = useStore.getState();
+  const cached = state.accountCache[accountId];
+  const updatedAt = patch.updated_at || new Date().toISOString();
+
+  if (cached) {
+    state.setAccountCache(accountId, {
+      data: {
+        ...cached.data,
+        account: {
+          ...cached.data.account,
+          name: patch.name,
+          icon_key: patch.icon,
+          iconKey: patch.icon,
+          currency: patch.currency,
+          updated_at: updatedAt,
+          updatedAt,
+        },
+      },
+      syncedAt: Date.now(),
+      serverUpdatedAt: updatedAt,
+    });
+  }
+
+  state.patchDashboardAccount(accountId, {
+    name: patch.name,
+    icon: patch.icon,
+    currency: patch.currency,
+    updated_at: updatedAt,
+  });
+  state.markAccountsSynced({ [accountId]: updatedAt });
+}
+
 export function putAccountCacheFromServer(accountId: string, data: AccountData, fetchStartedAt: number) {
   const current = useStore.getState().accountCache[accountId];
   if (current && current.syncedAt > fetchStartedAt) return;

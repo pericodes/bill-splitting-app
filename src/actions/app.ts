@@ -1,6 +1,7 @@
 "use server"
 
 import { dataApi, throwIfApiError } from "@/data/dataApi";
+import { isAccountCurrency, isAccountIcon } from "@/lib/accountSettings";
 import { verifyNeonSession } from "@/lib/neonSession";
 
 function userIdOf(row: { user_id?: string; userId?: string }) {
@@ -426,14 +427,25 @@ export async function getAccountData(accountId: string) {
   }
 }
 
+function normalizeAccountDetails(name: string, iconKey: string, currency: string) {
+  const trimmed = name.trim();
+  if (!trimmed) return { error: "El nombre es obligatorio" };
+  if (!isAccountCurrency(currency)) return { error: "Moneda no válida" };
+  if (!isAccountIcon(iconKey)) return { error: "Icono no válido" };
+  return { name: trimmed, iconKey, currency };
+}
+
 export async function createAccountAction(userId: string, name: string, iconKey: string, currency: string) {
   try {
+    const parsed = normalizeAccountDetails(name, iconKey, currency);
+    if ("error" in parsed) return { success: false, error: parsed.error };
+
     const { data: newAccount, error: accountError } = await dataApi
       .from("accounts")
       .insert({
-        name,
-        icon_key: iconKey,
-        currency,
+        name: parsed.name,
+        icon_key: parsed.iconKey,
+        currency: parsed.currency,
         created_by: userId,
       })
       .select()
@@ -455,6 +467,36 @@ export async function createAccountAction(userId: string, name: string, iconKey:
     throwIfApiError(balanceError, "No se pudo crear el saldo");
 
     return { success: true, accountId: newAccount.id };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
+
+export async function updateAccountAction(accountId: string, name: string, iconKey: string, currency: string) {
+  try {
+    const parsed = normalizeAccountDetails(name, iconKey, currency);
+    if ("error" in parsed) return { success: false, error: parsed.error };
+
+    const updatedAt = new Date().toISOString();
+    const { data, error } = await dataApi
+      .from("accounts")
+      .update({
+        name: parsed.name,
+        icon_key: parsed.iconKey,
+        currency: parsed.currency,
+        updated_at: updatedAt,
+      })
+      .eq("id", accountId)
+      .select("id, updated_at")
+      .single();
+    throwIfApiError(error, "No se pudo actualizar la cuenta");
+
+    return {
+      success: true,
+      updatedAt: (data as { updated_at?: string; updatedAt?: string } | null)?.updated_at
+        || (data as { updatedAt?: string } | null)?.updatedAt
+        || updatedAt,
+    };
   } catch (err: any) {
     return { success: false, error: err.message };
   }

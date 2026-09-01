@@ -102,6 +102,19 @@
     "currency_usd": "Dólar estadounidense (USD - $)",
     "currency_gbp": "Libra esterlina (GBP - £)"
   },
+  "edit_account": {
+    "title": "Editar",
+    "heading": "Editar cuenta",
+    "subtitle": "Cambia el nombre, el icono o la moneda de esta cuenta.",
+    "edit_aria": "Editar cuenta",
+    "error": "No se pudo guardar la cuenta.",
+    "delete": "Eliminar cuenta",
+    "deleting": "Eliminando...",
+    "delete_title": "Eliminar cuenta",
+    "delete_hint": "Se borrarán todos los gastos y participantes. Esta acción no se puede deshacer.",
+    "delete_desc": "¿Estás seguro de que deseas eliminar «{{name}}»? Esta acción no se puede deshacer.",
+    "delete_error": "No se pudo eliminar la cuenta."
+  },
   "account": {
     "loading": "Cargando...",
     "total_group": "Gasto total del grupo",

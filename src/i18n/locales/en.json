@@ -102,6 +102,19 @@
     "currency_usd": "US dollar (USD - $)",
     "currency_gbp": "British pound (GBP - £)"
   },
+  "edit_account": {
+    "title": "Edit",
+    "heading": "Edit account",
+    "subtitle": "Change this account's name, icon, or currency.",
+    "edit_aria": "Edit account",
+    "error": "Could not save the account.",
+    "delete": "Delete account",
+    "deleting": "Deleting...",
+    "delete_title": "Delete account",
+    "delete_hint": "All expenses and participants will be removed. This cannot be undone.",
+    "delete_desc": "Are you sure you want to delete “{{name}}”? This cannot be undone.",
+    "delete_error": "Could not delete the account."
+  },
   "account": {
     "loading": "Loading...",
     "total_group": "Group total",
