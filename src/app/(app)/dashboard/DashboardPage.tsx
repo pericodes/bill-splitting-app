@@ -5,8 +5,6 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import BottomNav from '@/components/layout/BottomNav';
 import PullToRefresh from '@/components/common/PullToRefresh';
-import { useAlert } from '@/components/common/AlertProvider';
-import { deleteAccountAction } from '@/actions/app';
 import { syncDashboard } from '@/data/dashboardSync';
 import { useHasHydrated, useStore } from '@/data/store';
 import { isRateLimitError } from '@/lib/errors';
@@ -23,9 +21,7 @@ export default function DashboardPage() {
     dashboardUserId,
     dashboardAccounts: accounts,
     dashboardBalances: balances,
-    removeDashboardAccount,
   } = useStore();
-  const { showConfirm } = useAlert();
 
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -65,27 +61,6 @@ export default function DashboardPage() {
   const handleRefresh = React.useCallback(async () => {
     await runSync({ forceMembership: true, forceAll: true });
   }, [runSync]);
-
-  const handleDelete = (id: string, e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    showConfirm({
-      title: t("dashboard.delete_title"),
-      description: t("dashboard.delete_desc"),
-      isDestructive: true,
-      confirmText: t("common.delete"),
-      onConfirm: async () => {
-        const res = await deleteAccountAction(id);
-        if (!res.success) {
-          console.error("Error deleting account:", res.error);
-          alert(t("dashboard.delete_error"));
-        } else {
-          removeDashboardAccount(id);
-          void runSync({ forceMembership: true });
-        }
-      }
-    });
-  };
 
   const handleLogout = async () => {
     await neonSignOut();
@@ -162,19 +137,11 @@ export default function DashboardPage() {
                 href={`/account/${account.id}`}
                 className="bg-surface-container-lowest rounded-2xl p-5 border border-outline-variant shadow-sm hover:shadow-md transition-all flex flex-col relative overflow-hidden group cursor-pointer"
               >
-                <div className="flex justify-between items-start mb-2">
+                <div className="flex items-start mb-2">
                   <div className="bg-surface-container-low rounded-lg p-2 text-primary">
                     <span className="material-symbols-outlined text-[24px]" style={{ fontVariationSettings: "'FILL' 1" }}>
                       {account.iconKey || account.icon_key || 'wallet'}
                     </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button 
-                      onClick={(e) => handleDelete(account.id, e)}
-                      className="text-on-surface-variant hover:text-error transition-colors p-1 rounded-full hover:bg-error-container/50 focus:outline-none z-10"
-                    >
-                      <span className="material-symbols-outlined text-[20px]">delete</span>
-                    </button>
                   </div>
                 </div>
                 

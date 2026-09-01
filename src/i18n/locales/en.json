@@ -80,9 +80,6 @@
     "view_profile": "View profile",
     "create_account": "Create new account",
     "my_balance": "My balance",
-    "delete_title": "Delete account",
-    "delete_desc": "Are you sure you want to delete this account? This cannot be undone.",
-    "delete_error": "Could not delete the account",
     "load_error": "Could not load accounts.",
     "rate_limit": "Neon Auth rate-limited requests. Wait a moment and try again.",
     "refreshing": "Refreshing..."

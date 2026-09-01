@@ -80,9 +80,6 @@
     "view_profile": "Ver perfil",
     "create_account": "Crear nueva cuenta",
     "my_balance": "Mi saldo",
-    "delete_title": "Eliminar cuenta",
-    "delete_desc": "¿Estás seguro de que deseas eliminar esta cuenta? Esta acción no se puede deshacer.",
-    "delete_error": "Error al eliminar la cuenta",
     "load_error": "No se pudieron cargar las cuentas.",
     "rate_limit": "Neon Auth ha limitado las peticiones. Espera un momento y vuelve a intentar.",
     "refreshing": "Actualizando..."
