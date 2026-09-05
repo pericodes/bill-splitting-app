@@ -133,8 +133,9 @@ export function applyOptimisticExpense(params: {
   currency: string;
   createdBy: string;
   splits: { userId: string; paid: number; owed: number }[];
+  type?: "expense" | "transfer";
 }) {
-  const { accountId, tempId, description, amount, currency, createdBy, splits } = params;
+  const { accountId, tempId, description, amount, currency, createdBy, splits, type = "expense" } = params;
   const state = useStore.getState();
   const cached = state.accountCache[accountId];
   if (!cached) return;
@@ -145,7 +146,7 @@ export function applyOptimisticExpense(params: {
     id: tempId,
     account_id: accountId,
     accountId,
-    type: "expense",
+    type,
     description,
     total_amount: amount.toString(),
     totalAmount: amount.toString(),

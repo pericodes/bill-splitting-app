@@ -128,9 +128,13 @@
     "add_expense": "Añadir gasto",
     "no_expenses": "No hay gastos todavía. Añade el primero.",
     "paid": "Pagó",
+    "payment": "Pago",
     "delete_expense_title": "Eliminar gasto",
     "delete_expense_desc": "¿Quieres eliminar «{{name}}»? Esta acción no se puede deshacer.",
+    "delete_payment_title": "Eliminar pago",
+    "delete_payment_desc": "¿Quieres eliminar «{{name}}»? Esta acción no se puede deshacer.",
     "this_expense": "este gasto",
+    "this_payment": "este pago",
     "delete_expense_error": "No se pudo eliminar el gasto.",
     "delete_aria": "Eliminar {{name}}",
     "refreshing": "Actualizando..."
@@ -173,7 +177,13 @@
     "csv_date": "Fecha",
     "csv_concept": "Concepto",
     "csv_person": "Persona",
-    "csv_amount": "Importe"
+    "csv_amount": "Importe",
+    "mark_paid": "Pagado!",
+    "mark_paid_title": "¿Registrar este pago?",
+    "mark_paid_desc": "Se creará un pago de {{amount}} {{currency}} de {{from}} a {{to}} y este saldo quedará saldado.",
+    "mark_paid_error": "No se pudo registrar el pago.",
+    "mark_paid_aria": "Marcar como pagado el saldo de {{from}} a {{to}}",
+    "settle_description": "Pago: {{from}} → {{to}}"
   },
   "participants": {
     "title": "Participantes",

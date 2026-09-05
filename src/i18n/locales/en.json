@@ -128,9 +128,13 @@
     "add_expense": "Add expense",
     "no_expenses": "No expenses yet. Add the first one.",
     "paid": "Paid by",
+    "payment": "Payment",
     "delete_expense_title": "Delete expense",
     "delete_expense_desc": "Delete “{{name}}”? This cannot be undone.",
+    "delete_payment_title": "Delete payment",
+    "delete_payment_desc": "Delete “{{name}}”? This cannot be undone.",
     "this_expense": "this expense",
+    "this_payment": "this payment",
     "delete_expense_error": "Could not delete the expense.",
     "delete_aria": "Delete {{name}}",
     "refreshing": "Refreshing..."
@@ -173,7 +177,13 @@
     "csv_date": "Date",
     "csv_concept": "Description",
     "csv_person": "Person",
-    "csv_amount": "Amount"
+    "csv_amount": "Amount",
+    "mark_paid": "Paid!",
+    "mark_paid_title": "Record this payment?",
+    "mark_paid_desc": "A payment of {{amount}} {{currency}} from {{from}} to {{to}} will be recorded and this balance will be settled.",
+    "mark_paid_error": "Could not record the payment.",
+    "mark_paid_aria": "Mark the balance from {{from}} to {{to}} as paid",
+    "settle_description": "Payment: {{from}} → {{to}}"
   },
   "participants": {
     "title": "Participants",

@@ -28,10 +28,19 @@ export default function AccountPage() {
 
   const myBalance = parseFloat(accountBalances.find(b => b.userId === currentUser?.id || b.user_id === currentUser?.id)?.balance || "0");
 
-  const handleDelete = (tx: { id: string; description?: string }) => {
+  const isTransfer = (tx: { type?: string }) => tx.type === "transfer";
+
+  const groupTotal = accountTxs
+    .filter((tx) => !isTransfer(tx))
+    .reduce((sum, tx) => sum + parseFloat(tx.totalAmount || tx.total_amount || "0"), 0);
+
+  const handleDelete = (tx: { id: string; description?: string; type?: string }) => {
+    const payment = isTransfer(tx);
     showConfirm({
-      title: t("account.delete_expense_title"),
-      description: t("account.delete_expense_desc", { name: tx.description || t("account.this_expense") }),
+      title: t(payment ? "account.delete_payment_title" : "account.delete_expense_title"),
+      description: t(payment ? "account.delete_payment_desc" : "account.delete_expense_desc", {
+        name: tx.description || t(payment ? "account.this_payment" : "account.this_expense"),
+      }),
       isDestructive: true,
       confirmText: t("common.delete"),
       onConfirm: async () => {
@@ -74,7 +83,7 @@ export default function AccountPage() {
           <div className="z-10 flex flex-col items-center">
             <p className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">{t("account.total_group")}</p>
             <h2 className="text-4xl font-bold text-on-surface mt-2">
-              {accountTxs.reduce((sum, tx) => sum + parseFloat(tx.totalAmount || tx.total_amount || "0"), 0).toFixed(2)} {account.currency}
+              {groupTotal.toFixed(2)} {account.currency}
             </h2>
           </div>
           
@@ -132,25 +141,40 @@ export default function AccountPage() {
 
                 const txAmount = parseFloat(tx.totalAmount || tx.total_amount || "0");
                 const netAmount = parseFloat(myEntry?.netAmount || myEntry?.net_amount || "0");
+                const payment = isTransfer(tx);
+                const dateLabel = format(new Date(tx.occurredOn || tx.occurred_on), 'MMM dd', { locale: dateFnsLocale(i18n.language) });
+                const subtitle = payment
+                  ? `${dateLabel} • ${t("account.payment")}`
+                  : <>{dateLabel} • {t("account.paid")} <span className="font-semibold">{payerName}</span></>;
+
+                const details = (
+                  <>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-bold text-base text-on-surface truncate">{tx.description}</h4>
+                      <p className="text-sm text-outline mt-1">{subtitle}</p>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="font-bold text-lg text-on-surface tracking-tight">{txAmount.toFixed(2)} {tx.currency || account.currency}</p>
+                      {myEntry && netAmount !== 0 && (
+                        <p className={`text-xs font-medium mt-1 ${netAmount > 0 ? 'text-secondary' : 'text-error'}`}>
+                          {netAmount > 0 ? '+' : ''}{netAmount.toFixed(2)}
+                        </p>
+                      )}
+                    </div>
+                  </>
+                );
 
                 return (
                   <div key={tx.id} className="flex items-center hover:bg-surface-container-low transition-colors">
-                    <Link href={`/account/${id}/expense?tx=${tx.id}`} className="flex-1 min-w-0 p-5 flex items-center gap-4 cursor-pointer no-underline text-inherit">
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-bold text-base text-on-surface truncate">{tx.description}</h4>
-                        <p className="text-sm text-outline mt-1">
-                          {format(new Date(tx.occurredOn || tx.occurred_on), 'MMM dd', { locale: dateFnsLocale(i18n.language) })} • {t("account.paid")} <span className="font-semibold">{payerName}</span>
-                        </p>
+                    {payment ? (
+                      <div className="flex-1 min-w-0 p-5 flex items-center gap-4">
+                        {details}
                       </div>
-                      <div className="text-right shrink-0">
-                        <p className="font-bold text-lg text-on-surface tracking-tight">{txAmount.toFixed(2)} {tx.currency || account.currency}</p>
-                        {myEntry && netAmount !== 0 && (
-                          <p className={`text-xs font-medium mt-1 ${netAmount > 0 ? 'text-secondary' : 'text-error'}`}>
-                            {netAmount > 0 ? '+' : ''}{netAmount.toFixed(2)}
-                          </p>
-                        )}
-                      </div>
-                    </Link>
+                    ) : (
+                      <Link href={`/account/${id}/expense?tx=${tx.id}`} className="flex-1 min-w-0 p-5 flex items-center gap-4 cursor-pointer no-underline text-inherit">
+                        {details}
+                      </Link>
+                    )}
                     <button
                       type="button"
                       aria-label={t("account.delete_aria", { name: tx.description })}

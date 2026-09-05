@@ -95,7 +95,7 @@ export default function AddExpensePage({
 
     if (txId) {
       const tx = (transactions || []).find((t: any) => t.id === txId);
-      if (!tx) {
+      if (!tx || tx.type === "transfer") {
         router.push(`/account/${id}`);
         return;
       }

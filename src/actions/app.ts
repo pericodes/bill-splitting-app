@@ -841,7 +841,8 @@ export async function addTransactionAction(
   description: string,
   amount: number,
   splits: { userId: string; paid: number; owed: number }[],
-  createdBy?: string
+  createdBy?: string,
+  type: "expense" | "transfer" = "expense"
 ) {
   try {
     const { data: account, error: accountError } = await dataApi
@@ -851,6 +852,8 @@ export async function addTransactionAction(
       .single();
     throwIfApiError(accountError, "No se pudo leer la cuenta");
 
+    const txType = type === "transfer" ? "transfer" : "expense";
+
     const { data: newTx, error: txError } = await dataApi
       .from("transactions")
       .insert({
@@ -859,7 +862,7 @@ export async function addTransactionAction(
         total_amount: amount.toString(),
         currency: account?.currency || "EUR",
         created_by: createdBy || splits[0]?.userId,
-        type: "expense",
+        type: txType,
       })
       .select()
       .single();
