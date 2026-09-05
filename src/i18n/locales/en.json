@@ -82,7 +82,12 @@
     "my_balance": "My balance",
     "load_error": "Could not load accounts.",
     "rate_limit": "Neon Auth rate-limited requests. Wait a moment and try again.",
-    "refreshing": "Refreshing..."
+    "refreshing": "Refreshing...",
+    "install_app": "Download the app",
+    "install_title": "Install the app",
+    "install_confirm": "Do you want to install the app on this device? You will be able to open it from the desktop or home screen.",
+    "install_confirm_action": "Install",
+    "install_unavailable": "This browser cannot install the app right now. Open it in Chrome or Edge and try again."
   },
   "create_account": {
     "title": "Create account",

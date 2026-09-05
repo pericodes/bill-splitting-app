@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import BottomNav from '@/components/layout/BottomNav';
+import InstallAppButton from '@/components/common/InstallAppButton';
 import PullToRefresh from '@/components/common/PullToRefresh';
 import { syncDashboard } from '@/data/dashboardSync';
 import { useHasHydrated, useStore } from '@/data/store';
@@ -82,21 +83,25 @@ export default function DashboardPage() {
         <h1 className="text-xl font-bold text-on-surface">{t("common.app_name")}</h1>
         <nav className="flex gap-6 items-center">
           <Link href="/profile" className="text-xs font-semibold text-primary uppercase tracking-wider hover:bg-surface-container-high px-4 py-2 rounded-lg transition-colors">{t("dashboard.view_profile")}</Link>
-          <button 
-            onClick={handleLogout}
-            className="text-xs font-semibold text-error uppercase tracking-wider hover:bg-error-container/20 px-4 py-2 rounded-lg transition-colors"
-          >
-            {t("common.close_session")}
-          </button>
+          <div className="flex items-center gap-1">
+            <button 
+              onClick={handleLogout}
+              className="text-xs font-semibold text-error uppercase tracking-wider hover:bg-error-container/20 px-4 py-2 rounded-lg transition-colors"
+            >
+              {t("common.close_session")}
+            </button>
+            <InstallAppButton />
+          </div>
         </nav>
       </header>
 
       <main className="flex-grow w-full max-w-5xl mx-auto px-4 md:px-6 pt-6 pb-8">
-        <div className="flex justify-between items-end mb-6">
+        <div className="flex justify-between items-start mb-6">
           <div>
             <h2 className="text-2xl md:text-3xl font-bold text-on-surface">{t("dashboard.my_accounts")}</h2>
             <p className="text-sm text-on-surface-variant mt-2">{t("dashboard.subtitle")}</p>
           </div>
+          <InstallAppButton className="mt-1 -mr-1 md:hidden" />
         </div>
 
         {fetchError && (

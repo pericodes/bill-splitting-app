@@ -82,7 +82,12 @@
     "my_balance": "Mi saldo",
     "load_error": "No se pudieron cargar las cuentas.",
     "rate_limit": "Neon Auth ha limitado las peticiones. Espera un momento y vuelve a intentar.",
-    "refreshing": "Actualizando..."
+    "refreshing": "Actualizando...",
+    "install_app": "Descargar la app",
+    "install_title": "Instalar la app",
+    "install_confirm": "¿Quieres instalar la app en este dispositivo? Podrás abrirla desde el escritorio o la pantalla de inicio.",
+    "install_confirm_action": "Instalar",
+    "install_unavailable": "Este navegador no permite instalar la app ahora. Ábrela en Chrome o Edge e inténtalo de nuevo."
   },
   "create_account": {
     "title": "Crear cuenta",

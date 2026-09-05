@@ -1,4 +1,5 @@
 import { AlertProvider } from "@/components/common/AlertProvider";
+import PwaInstallCapture from "@/components/common/PwaInstallCapture";
 import SiteFooter from "@/components/layout/SiteFooter";
 import I18nProvider from "@/i18n/I18nProvider";
 
@@ -13,6 +14,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       />
       <I18nProvider>
         <AlertProvider>
+          <PwaInstallCapture />
           <div className="min-h-screen flex flex-col">
             <div className="flex-1 flex flex-col">{children}</div>
             <SiteFooter />
